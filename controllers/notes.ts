@@ -1,8 +1,9 @@
 
 import { Database } from "sql.js";
 
-interface Note {
+export interface Note {
 	id: string;
+	title: string;
 	location: string;
 	reviewed: boolean;
 	tracked: boolean;
@@ -13,9 +14,10 @@ interface Note {
 export class NotesController {
 	private db: Database;
 
-	constructor(db: Database) {
-		this.db = db;
-		this.initializeDatabase();
+	//constructor(db: Database) {
+	constructor() {
+		// this.db = db;
+		// this.initializeDatabase();
 	}
 
 	private initializeDatabase() {
@@ -44,7 +46,6 @@ export class NotesController {
 	getNotes(): Note[] {
 		const query = `SELECT * FROM Notes`;
 		const statement = this.db.prepare(query);
-
 		const result: Note[] = [];
 		while (statement.step()) {
 			result.push(statement.getAsObject() as Note);

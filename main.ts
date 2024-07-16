@@ -8,12 +8,59 @@ export default class ExamplePlugin extends Plugin {
 	private notesController: NotesController;
 
 	async onload() {
+
+		const notifications = [
+			{
+				id: 'something_1',
+				reviewed: false,
+				tracked: true,
+				bookmarked: false,
+				last_reviewed: "",
+
+				title: 'Amazon Cognito',
+				location: '0 - TODO/Amazon Cognito.md'
+				
+			},
+			{
+				id: 'something_1',
+				reviewed: false,
+				tracked: true,
+				bookmarked: false,
+				last_reviewed: "",
+
+				title: 'Something_Again',
+				location: '0 - TODO/Something_Again.md'
+			},
+			{
+				id: 'something_1',
+				reviewed: false,
+				tracked: true,
+				bookmarked: false,
+				last_reviewed: "",
+
+				title: 'TODO',
+				location: '0 - TODO/TODO.md'
+			}
+		];
+
 		const db = await initDatabase();
-		this.notesController = new NotesController(db);
+
+		//this.notesController = new NotesController(db);
+		this.notesController = new NotesController();
+		// this.notesController.addNote({
+		// 	id: "example-id",
+		// 	location: '0 - TODO/Amazon Cognito.md',
+		// 	reviewed: false,
+		// 	tracked: true,
+		// 	bookmarked: false,
+		// 	last_reviewed: new Date().toISOString()
+		// });
+
+		// const notifications = this.notesController.getNotes();
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf)
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, notifications)
 		)
 
 		this.app.workspace.onLayoutReady(() => this.activateView());

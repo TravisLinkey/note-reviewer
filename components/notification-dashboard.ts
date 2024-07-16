@@ -1,26 +1,15 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { NotificationComponent } from './notification';
+import { Note } from 'controllers/notes';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
 export class NotificationDashboardView extends ItemView {
-	notifications = [
-		{
-			title: 'Amazon Cognito',
-			path: '0 - TODO/Amazon Cognito.md'
-		},
-		{
-			title: 'Something_Again',
-			path: '0 - TODO/Something_Again.md'
-		},
-		{
-			title: 'TODO',
-			path: '0 - TODO/TODO.md'
-		}
-	];
+	private notifications: Note[] = [];
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, notifications: Note[]) {
 		super(leaf);
+		this.notifications = notifications;
 	}
 
 	getViewType(): string {
@@ -32,6 +21,16 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async onOpen() {
+		this.initUI();
+	}
+
+	async onClose() {
+		const { contentEl } = this;
+
+		contentEl.empty();
+	}
+
+	initUI() {
 		const { contentEl } = this;
 
 		// Add a style block for custom styles
@@ -103,13 +102,8 @@ export class NotificationDashboardView extends ItemView {
 
 
 		// Add notifications to the container
-		this.notifications.forEach(notification => new NotificationComponent(this.app, container, notification));
-	}
+		this.notifications.forEach((notification: Note) => new NotificationComponent(this.app, container, notification));
 
-	async onClose() {
-		const { contentEl } = this;
-
-		contentEl.empty();
 	}
 
 	toggleSelectAll(checked: boolean) {

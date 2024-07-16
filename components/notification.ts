@@ -1,17 +1,13 @@
+import { Note } from 'controllers/notes';
 import { App, Component, TFile } from 'obsidian';
-
-interface Notification {
-	title: string;
-	path: string;
-}
 
 export class NotificationComponent extends Component {
 	private app: App;
-	private notification: Notification;
+	private notification: Note;
 	private container: HTMLElement;
 	private buttonsContainer: HTMLElement;
 
-	constructor(app: App, container: HTMLElement, notification: Notification) {
+	constructor(app: App, container: HTMLElement, notification: Note) {
 		super();
 		this.app = app;
 		this.notification = notification;
@@ -23,8 +19,9 @@ export class NotificationComponent extends Component {
 
 		const notificationEl = this.container.createEl('div', { cls: 'notification' });
 
-		const checkboxEl = notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-		const titleEl = notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title });
+		notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
+		notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title }
+		);
 
 		this.buttonsContainer = notificationEl.createEl('div', { cls: 'notification-buttons-container' });
 
@@ -79,11 +76,11 @@ export class NotificationComponent extends Component {
 
 
 	openNote() {
-		const file = this.app.vault.getAbstractFileByPath(this.notification.path);
+		const file = this.app.vault.getAbstractFileByPath(this.notification.location);
 		if (file instanceof TFile) {
 			this.app.workspace.getLeaf(true).openFile(file, { state: { mode: 'preview' } });
 		} else {
-			console.error(`File not found: ${this.notification.path}`);
+			console.error(`File not found: ${this.notification.location}`);
 		}
 	}
 
@@ -92,6 +89,6 @@ export class NotificationComponent extends Component {
 	}
 
 	bookmarkNote() {
-		console.log(`Bookmarking note: ${this.notification.title}`);
+		console.log(`Bookmarking note: ${this.notification.id}`);
 	}
 }
