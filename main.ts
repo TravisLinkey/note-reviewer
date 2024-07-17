@@ -2,6 +2,7 @@ import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "com
 import { NotesController } from "controllers/notes";
 import { initDatabase } from "db/sqlite";
 import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import { Note } from "controllers/notes";
 
 
 export default class ExamplePlugin extends Plugin {
@@ -9,35 +10,32 @@ export default class ExamplePlugin extends Plugin {
 
 	async onload() {
 
-		const notifications = [
+		const notifications: Note[] = [
 			{
 				id: 'something_1',
-				reviewed: false,
-				tracked: true,
-				bookmarked: false,
+				reviewed: 0,
+				tracked: 1,
+				bookmarked: 0,
 				last_reviewed: "",
-
 				title: 'Amazon Cognito',
 				location: '0 - TODO/Amazon Cognito.md'
 				
 			},
 			{
 				id: 'something_1',
-				reviewed: false,
-				tracked: true,
-				bookmarked: false,
+				reviewed: 0,
+				tracked: 1,
+				bookmarked: 0,
 				last_reviewed: "",
-
 				title: 'Something_Again',
 				location: '0 - TODO/Something_Again.md'
 			},
 			{
 				id: 'something_1',
-				reviewed: false,
-				tracked: true,
-				bookmarked: false,
+				reviewed: 0,
+				tracked: 1,
+				bookmarked: 0,
 				last_reviewed: "",
-
 				title: 'TODO',
 				location: '0 - TODO/TODO.md'
 			}

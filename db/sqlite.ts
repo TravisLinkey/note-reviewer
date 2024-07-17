@@ -1,14 +1,14 @@
-import initSqlJs, { Database, SqlJsStatic } from "sql.js";
+import { Database } from "sqlite3";
 
-let SQL: SqlJsStatic;
+let SQL: any;
 
-export async function initDatabase(): Promise<Database> {
+export const initDatabase = async (): Promise<Database>	=> {
 	if (!SQL) {
-		SQL = await initSqlJs();
+		SQL = new Database("db.sqlite");
 	}
 
-	const db = new SQL.Database();
-	db.run(`CREATE TABLE IF NOT EXISTS Notes (
+	const db = new SQL.Database('db.sqlite');
+	db.exec(`CREATE TABLE IF NOT EXISTS Notes (
         id TEXT PRIMARY KEY,
         location TEXT,
         reviewed BOOLEAN,
@@ -19,3 +19,4 @@ export async function initDatabase(): Promise<Database> {
 
 	return db;
 }
+
