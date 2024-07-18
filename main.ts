@@ -1,50 +1,43 @@
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { NotesController } from "controllers/notes";
-import { initDatabase } from "db/sqlite";
 import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
 import { Note } from "controllers/notes";
+import { QueueStorage } from "service/queue-storage";
+import { v4 as uuidv4 } from 'uuid';
+import { notifications as mockNotifications } from "service/mock-notes";
 
-
-export default class ExamplePlugin extends Plugin {
+export default class NotificationDashboardPlugin extends Plugin {
 	private notesController: NotesController;
+	private qs: QueueStorage;
+	private notifications: Note[];
+	private ribbonIconEl: HTMLElement;
+	private basePath: string;
 
 	async onload() {
+		// @ts-ignore
+		this.basePath = this.app.vault.adapter.basePath + "/.obsidian/plugins/note-reviewer";
 
-		const notifications: Note[] = [
-			{
-				id: 'something_1',
-				reviewed: 0,
-				tracked: 1,
-				bookmarked: 0,
-				last_reviewed: "",
-				title: 'Amazon Cognito',
-				location: '0 - TODO/Amazon Cognito.md'
-				
-			},
-			{
-				id: 'something_1',
-				reviewed: 0,
-				tracked: 1,
-				bookmarked: 0,
-				last_reviewed: "",
-				title: 'Something_Again',
-				location: '0 - TODO/Something_Again.md'
-			},
-			{
-				id: 'something_1',
-				reviewed: 0,
-				tracked: 1,
-				bookmarked: 0,
-				last_reviewed: "",
-				title: 'TODO',
-				location: '0 - TODO/TODO.md'
-			}
-		];
+		this.ribbonIconEl = this.addRibbonIcon('bell', 'Open Notifications', async () => {
+			this.activateView()
+		});
+		this.ribbonIconEl.classList.add('badge-container');
+		this.updateBadge();
 
-		const db = await initDatabase();
+		this.qs = new QueueStorage(this.basePath);
+
+		// this.notifications = mockNotifications;
+		// this.qs.writeNoteToCSV(notifications, basePath + '/storage/archive.csv');
+
+		const isEmpty = await this.qs.isStorageEmpty();
+		if (isEmpty) {
+			await this.qs.pullNotesFromArchive();
+		} 			 
+		console.log("Is storage empty? ", isEmpty);
+		this.notifications = await this.qs.pullNotesFromStorage();
+
+		this.notesController = new NotesController();
 
 		//this.notesController = new NotesController(db);
-		this.notesController = new NotesController();
 		// this.notesController.addNote({
 		// 	id: "example-id",
 		// 	location: '0 - TODO/Amazon Cognito.md',
@@ -58,10 +51,10 @@ export default class ExamplePlugin extends Plugin {
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, notifications)
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.qs)
 		)
 
-		this.app.workspace.onLayoutReady(() => this.activateView());
+		// this.app.workspace.onLayoutReady(() => this.activateView());
 
 		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
 
@@ -75,7 +68,6 @@ export default class ExamplePlugin extends Plugin {
 	}
 
 	async activateView() {
-
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
 
 		await this.app.workspace.getLeaf(true).setViewState({
@@ -86,11 +78,47 @@ export default class ExamplePlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
-	onFileRenamed(file: TFile) {
+	async onFileRenamed(file: TFile) {
 		if (file.extension === 'md') {
 			console.log(`File renamed: ${file.path}`);
+			console.log("File: ", file);
 
-			// TODO - add file to Notes database
+			// @ts-ignore
+			const note: Note = {
+				id: uuidv4(),
+				title: file.basename,
+				location: file.path,
+				reviewed: false,
+				tracked: true,
+				bookmarked: false,
+				last_reviewed: new Date().toLocaleDateString()
+			};
+
+			console.log("Note: ", note);
+			await this.qs.writeNoteToCSV([note], this.basePath + "/storage/notes.csv");
 		}
+	}
+
+	updateBadge(){
+		const unreadCount = this.getUnreadNotificationCount(); // Implement this method to get the count of unread notifications
+        if (unreadCount > 0) {
+            let badgeEl = this.ribbonIconEl.querySelector('.badge');
+            if (!badgeEl) {
+                badgeEl = document.createElement('div');
+                badgeEl.className = 'badge';
+                this.ribbonIconEl.appendChild(badgeEl);
+            }
+            badgeEl.textContent = unreadCount < 10 ? unreadCount.toString() : "+";
+            badgeEl.classList.add('active');
+        } else {
+            const badgeEl = this.ribbonIconEl.querySelector('.badge');
+            if (badgeEl) {
+                badgeEl.classList.remove('active');
+            }
+        }
+	};
+
+	getUnreadNotificationCount(): number {
+		return 5;
 	}
 }

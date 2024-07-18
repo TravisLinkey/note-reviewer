@@ -1,15 +1,22 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { NotificationComponent } from './notification';
 import { Note } from 'controllers/notes';
+import { QueueStorage } from 'service/queue-storage';
+import { dashboardStyle } from '../constants';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
 export class NotificationDashboardView extends ItemView {
-	private notifications: Note[] = [];
+	private notes: Note[] = [];
+	private notifications: NotificationComponent[];
+	private qs: QueueStorage;
+	private selectAllCheckboxEl: HTMLInputElement;
 
-	constructor(leaf: WorkspaceLeaf, notifications: Note[]) {
+	constructor(leaf: WorkspaceLeaf, notes: Note[], qs: QueueStorage) {
 		super(leaf);
-		this.notifications = notifications;
+		this.notes = notes;
+		this.notifications  = [];
+		this.qs = qs;
 	}
 
 	getViewType(): string {
@@ -35,50 +42,7 @@ export class NotificationDashboardView extends ItemView {
 
 		// Add a style block for custom styles
 		const style = document.createElement('style');
-		style.textContent = `
-		.notification-dashboard {
-			padding: 20px;
-		}
-		.notification-header {
-			display: flex;
-			justify-content: space-between;
-        	align-items: center; /* Align items vertically */
-        	padding: 10px;
-        	border-bottom: 1px solid #e1e4e8;
-        	font-weight: bold;
-    	}
-		.notification-header .done-header-button {
-			display: none; /* Initially hide the done button */
-		}
-		.notification-header .done-header-button.visible {
-			display: inline-block; /* Show when the visible class is added */
-		}
-    	.notification {
-    	    display: flex;
-    	    justify-content: space-between;
-    	    padding: 10px;
-    	    border-bottom: 1px solid #e1e4e8;
-    	    transition: background-color 0.2s ease-in-out;
-    	    height: 40px; /* Set a fixed height */
-    	    align-items: center; 
-    	}
-    	.notification-checkbox {
-    	    margin-right: 10px;
-    	}
-    	.notification-title {
-    	    font-weight: bold;
-    	    margin-right: 10px;
-    	    flex: 1;
-    	}
-    	.notification-buttons-container {
-    	    display: none;
-    	    flex-direction: row;
-    	    gap: 5px;
-    	}
-    	.highlighted {
-    	    background-color: var(--background-modifier-hover);
-    	}	
-		`;
+		style.textContent = dashboardStyle;
 		document.head.appendChild(style);
 
 		// Main container
@@ -88,8 +52,8 @@ export class NotificationDashboardView extends ItemView {
 		const headerEl = container.createEl('div', { cls: 'notification-header' });
 
 		// Select All Checkbox
-		const selectAllCheckboxEl = headerEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-		selectAllCheckboxEl.addEventListener('change', () => this.toggleSelectAll(selectAllCheckboxEl.checked));
+		this.selectAllCheckboxEl = headerEl.createEl('input', { type: 'checkbox', cls: 'all-notification-checkbox' });
+		this.selectAllCheckboxEl.addEventListener('change', () => this.toggleSelectAll());
 
 		// Title Label
 		headerEl.createEl('div', { text: 'Select all', cls: 'notification-title' });
@@ -102,22 +66,34 @@ export class NotificationDashboardView extends ItemView {
 
 
 		// Add notifications to the container
-		this.notifications.forEach((notification: Note) => new NotificationComponent(this.app, container, notification));
+		this.notes.forEach((notification: Note) => {
+			const elem = new NotificationComponent(this.app, container, notification, this.qs);
+			this.notifications.push(elem);
+		});
 
 	}
 
-	toggleSelectAll(checked: boolean) {
-		const checkboxes = this.contentEl.querySelectorAll('.notification-checkbox');
-		checkboxes.forEach((checkbox: HTMLInputElement) => {
-			checkbox.checked = checked;
+	toggleSelectAll() {
+		const isChecked = this.selectAllCheckboxEl.checked;
+		this.notifications.forEach((notification: NotificationComponent) => {
+			notification.setCheckboxState(isChecked);
 		});
 		this.updateDoneButtonVisibility();
 	}
 
 
-	markAllDone() {
-		const notifications = this.contentEl.querySelectorAll('.notification');
-		notifications.forEach((notification: HTMLElement) => notification.remove());
+	async markAllDone() {
+
+		const allIds: string[] = [];
+
+		this.notifications.map((notification: NotificationComponent) => {
+			if (notification.isChecked()) {
+				allIds.push(notification.notification.id);
+				notification.notificationEl.remove();
+			}
+		})
+
+		await this.qs.removeSelectedNotesFromStorage(allIds);
 	}
 
 	// Add the updateDoneButtonVisibility method to NotificationDashboardView class

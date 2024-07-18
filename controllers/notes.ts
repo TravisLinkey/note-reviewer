@@ -5,9 +5,9 @@ export interface Note {
 	id: string;
 	title: string;
 	location: string;
-	reviewed: number;
-	tracked: number;
-	bookmarked: number;
+	reviewed: boolean;
+	tracked: boolean;
+	bookmarked: boolean;
 	last_reviewed: string;
 }
 
@@ -55,9 +55,9 @@ export class NotesController {
 				id: row.id as string,
 				title: row.title as string,
 				location: row.location as string,
-				reviewed: row.reviewed as number,
-				tracked: row.tracked as number,
-				bookmarked: row.bookmarked as number,
+				reviewed: row.reviewed as boolean,
+				tracked: row.tracked as boolean,
+				bookmarked: row.bookmarked as boolean,
 				last_reviewed: row.last_reviewed as string
 			}
 			result.push(note);

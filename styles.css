@@ -1,8 +1,20 @@
-/*
+.ribbon-icon.badge-container {
+    position: relative;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.ribbon-icon.badge-container .badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    display: none; /* Initially hidden */
+}
 
-If your plugin does not need CSS, delete this file.
-
-*/
+.ribbon-icon.badge-container .badge.active {
+    display: inline-block; /* Show when active */
+}

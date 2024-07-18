@@ -1,51 +1,59 @@
+import { createIcon, bookmarkIcon, viewIcon } from '../constants/index';
 import { Note } from 'controllers/notes';
 import { App, Component, TFile } from 'obsidian';
+import { QueueStorage } from 'service/queue-storage';
 
 export class NotificationComponent extends Component {
 	private app: App;
-	private notification: Note;
-	private container: HTMLElement;
 	private buttonsContainer: HTMLElement;
+	private container: HTMLElement;
+	public notification: Note;
+	public notificationEl: HTMLElement;
+	private qs: QueueStorage;
+	private checkboxEl: HTMLInputElement;
 
-	constructor(app: App, container: HTMLElement, notification: Note) {
+	constructor(app: App, container: HTMLElement, notification: Note, qs: QueueStorage) {
 		super();
 		this.app = app;
 		this.notification = notification;
 		this.container = container;
+		this.qs = qs;
 		this.render();
 	}
 
 	render() {
 
-		const notificationEl = this.container.createEl('div', { cls: 'notification' });
+		this.notificationEl = this.container.createEl('div', { cls: 'notification' });
 
-		notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-		notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title }
+		this.checkboxEl = this.notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
+		this.notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title }
 		);
 
-		this.buttonsContainer = notificationEl.createEl('div', { cls: 'notification-buttons-container' });
-
-		// View Button (Eye Icon)
-		const viewButton = this.createIconButton('M12 4.5c-7.8 0-12 7.5-12 7.5s4.2 7.5 12 7.5 12-7.5 12-7.5-4.2-7.5-12-7.5zm0 13c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm0-10.5c-2.5 0-4.5 2-4.5 4.5s2 4.5 4.5 4.5 4.5-2 4.5-4.5-2-4.5-4.5-4.5z', 'View', this.openNote.bind(this));
+		// Buttons
+		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'notification-buttons-container' });
+		const viewButton = this.createIconButton(viewIcon, 'View', this.openNote.bind(this));
+		const doneButton = this.createIconButton(createIcon, 'Done', () => this.markDone());
+		const bookmarkButton = this.createIconButton(bookmarkIcon, 'Bookmark', this.bookmarkNote.bind(this));
 		this.buttonsContainer.appendChild(viewButton);
-
-		// Done Button (Check Icon)
-		const doneButton = this.createIconButton('M10 20l-5.293-5.293 1.414-1.414L10 17.172l8.879-8.879 1.414 1.414z', 'Done', () => this.markDone(notificationEl));
 		this.buttonsContainer.appendChild(doneButton);
-
-		// Bookmark Button (Bookmark Icon)
-		const bookmarkButton = this.createIconButton('M6 4c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v18l-7-3-7 3V4z', 'Bookmark', this.bookmarkNote.bind(this));
 		this.buttonsContainer.appendChild(bookmarkButton);
 
 		// Add event listeners for highlighting
-		notificationEl.addEventListener('mouseenter', () => {
-			notificationEl.classList.add('highlighted');
+		this.notificationEl.addEventListener('mouseenter', () => {
+			this.notificationEl.classList.add('highlighted');
 			this.buttonsContainer.style.display = 'flex';
 		});
 
-		notificationEl.addEventListener('mouseleave', () => {
-			notificationEl.classList.remove('highlighted');
+		this.notificationEl.addEventListener('mouseleave', () => {
+			this.notificationEl.classList.remove('highlighted');
 			this.buttonsContainer.style.display = 'none';
+		});
+
+		this.notificationEl.addEventListener('click', (event) => {
+			if (event.target !== this.checkboxEl) {
+				this.checkboxEl.checked = !this.checkboxEl.checked;
+				this.checkboxEl.dispatchEvent(new Event('change'));
+			}
 		});
 
 		// Initially hide the buttons
@@ -84,11 +92,21 @@ export class NotificationComponent extends Component {
 		}
 	}
 
-	markDone(notificationEl: HTMLElement) {
-		notificationEl.remove();
+	async markDone() {
+		await this.qs.removeSelectedNotesFromStorage([this.notification.id]);
+		this.notificationEl.remove();
 	}
 
 	bookmarkNote() {
 		console.log(`Bookmarking note: ${this.notification.id}`);
+	}
+
+	setCheckboxState(isChecked: boolean) {
+		this.checkboxEl.checked = isChecked;
+	}
+
+	isChecked() {
+		const checkboxEl = this.container.querySelector('.notification-checkbox') as HTMLInputElement;
+		return checkboxEl.checked;
 	}
 }
