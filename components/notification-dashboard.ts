@@ -83,7 +83,6 @@ export class NotificationDashboardView extends ItemView {
 
 
 	async markAllDone() {
-
 		const allIds: string[] = [];
 
 		this.notifications.map((notification: NotificationComponent) => {
@@ -96,7 +95,6 @@ export class NotificationDashboardView extends ItemView {
 		await this.qs.removeSelectedNotesFromStorage(allIds);
 	}
 
-	// Add the updateDoneButtonVisibility method to NotificationDashboardView class
 	updateDoneButtonVisibility() {
 		const checkboxes = this.contentEl.querySelectorAll('.notification-checkbox:checked');
 		const doneHeaderButton = this.contentEl.querySelector('.done-header-button');

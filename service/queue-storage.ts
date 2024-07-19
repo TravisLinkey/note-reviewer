@@ -4,6 +4,16 @@ import { Note } from "controllers/notes";
 import { createObjectCsvWriter } from 'csv-writer';
 import { CsvWriter } from 'csv-writer/src/lib/csv-writer';
 
+const header = [
+	{ id: 'id', title: 'ID' },
+	{ id: 'title', title: 'TITLE' },
+	{ id: 'location', title: 'LOCATION' },
+	{ id: 'reviewed', title: 'REVIEWED' },
+	{ id: 'tracked', title: 'TRACKED' },
+	{ id: 'bookmarked', title: 'BOOKMARKED' },
+	{ id: 'last_reviewed', title: 'LAST_REVIEWED' },
+]
+
 export class QueueStorage {
 	private basePath: string;
 	private notesFile: string;
@@ -36,28 +46,12 @@ export class QueueStorage {
 
 		this.notesWriter = createObjectCsvWriter({
 			path: this.notesFile,
-			header: [
-				{ id: 'id', title: 'ID' },
-				{ id: 'title', title: 'TITLE' },
-				{ id: 'location', title: 'LOCATION' },
-				{ id: 'reviewed', title: 'REVIEWED' },
-				{ id: 'tracked', title: 'TRACKED' },
-				{ id: 'bookmarked', title: 'BOOKMARKED' },
-				{ id: 'last_reviewed', title: 'LAST_REVIEWED' },
-			],
+			header,
 			append: true
 		});
 		this.archiveWriter = createObjectCsvWriter({
 			path: this.archiveFile,
-			header: [
-				{ id: 'id', title: 'ID' },
-				{ id: 'title', title: 'TITLE' },
-				{ id: 'location', title: 'LOCATION' },
-				{ id: 'reviewed', title: 'REVIEWED' },
-				{ id: 'tracked', title: 'TRACKED' },
-				{ id: 'bookmarked', title: 'BOOKMARKED' },
-				{ id: 'last_reviewed', title: 'LAST_REVIEWED' },
-			],
+			header,
 			append: true
 		});
 	}
@@ -139,15 +133,7 @@ export class QueueStorage {
 	async overwriteCsv(notes: Note[], filepath: string): Promise<void> {
 		const writer = createObjectCsvWriter({
 			path: filepath,
-			header: [
-				{ id: 'id', title: 'ID' },
-				{ id: 'title', title: 'TITLE' },
-				{ id: 'location', title: 'LOCATION' },
-				{ id: 'reviewed', title: 'REVIEWED' },
-				{ id: 'tracked', title: 'TRACKED' },
-				{ id: 'bookmarked', title: 'BOOKMARKED' },
-				{ id: 'last_reviewed', title: 'LAST_REVIEWED' },
-			]
+			header
 		});
 
 		await writer.writeRecords(notes);
@@ -160,6 +146,8 @@ export class QueueStorage {
 	async pullNotesFromArchive(): Promise<void> {
 		const notes = await this.getTopNNotes(10, this.archiveFile);
 		await this.removeTopNNotes(10, this.archiveFile);
+
+		// TODO - only pull the notes that are older than some time frame
 
 		this.writeNoteToCSV(notes, this.notesFile);
 	}

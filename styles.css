@@ -18,3 +18,12 @@
 .ribbon-icon.badge-container .badge.active {
     display: inline-block; /* Show when active */
 }
+
+.notification-title {
+    cursor: pointer; /* Add this class to your stylesheet */
+}
+
+.notification {
+    /* Other styles */
+    cursor: default; /* Ensure the default cursor for the container */
+}

@@ -2,6 +2,7 @@ import { createIcon, bookmarkIcon, viewIcon } from '../constants/index';
 import { Note } from 'controllers/notes';
 import { App, Component, TFile } from 'obsidian';
 import { QueueStorage } from 'service/queue-storage';
+import fs from 'fs';
 
 export class NotificationComponent extends Component {
 	private app: App;
@@ -23,11 +24,18 @@ export class NotificationComponent extends Component {
 
 	render() {
 
-		this.notificationEl = this.container.createEl('div', { cls: 'notification' });
+		const notificationEl = this.container.createEl('div', { cls: 'notification' });
+		this.notificationEl = notificationEl;
 
 		this.checkboxEl = this.notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-		this.notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title }
-		);
+
+		// Title
+		const titleEl = this.notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title });
+		titleEl.addEventListener('click', this.openNote.bind(this));
+
+		// Last Reviewed Label
+        const lastReviewedEl = notificationEl.createEl('div', { cls: 'notification-last-reviewed' });
+        lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
 
 		// Buttons
 		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'notification-buttons-container' });
@@ -43,17 +51,9 @@ export class NotificationComponent extends Component {
 			this.notificationEl.classList.add('highlighted');
 			this.buttonsContainer.style.display = 'flex';
 		});
-
 		this.notificationEl.addEventListener('mouseleave', () => {
 			this.notificationEl.classList.remove('highlighted');
 			this.buttonsContainer.style.display = 'none';
-		});
-
-		this.notificationEl.addEventListener('click', (event) => {
-			if (event.target !== this.checkboxEl) {
-				this.checkboxEl.checked = !this.checkboxEl.checked;
-				this.checkboxEl.dispatchEvent(new Event('change'));
-			}
 		});
 
 		// Initially hide the buttons
@@ -85,6 +85,7 @@ export class NotificationComponent extends Component {
 
 	openNote() {
 		const file = this.app.vault.getAbstractFileByPath(this.notification.location);
+		console.log("FILE: ", file);
 		if (file instanceof TFile) {
 			this.app.workspace.getLeaf(true).openFile(file, { state: { mode: 'preview' } });
 		} else {
