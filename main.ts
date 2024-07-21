@@ -1,31 +1,70 @@
 import { FileStructureState } from "service/file-structure-state";
-import { Note } from "controllers/notes";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
 import { QueueStorage } from "service/queue-storage";
+
+export interface Note {
+	id: string;
+	title: string;
+	location: string;
+	reviewed: boolean;
+	tracked: boolean;
+	bookmarked: boolean;
+	last_reviewed: string;
+}
 
 export default class NotificationDashboardPlugin extends Plugin {
 	private qs: QueueStorage;
 	private notifications: Note[];
 	private ribbonIconEl: HTMLElement;
 	private basePath: string;
+	private fileStructure: FileStructureState;
 
 	async onload() {
 		// @ts-ignore
 		this.basePath = this.app.vault.adapter.basePath + "/.obsidian/plugins/note-reviewer";
 
 		this.ribbonIconEl = this.addRibbonIcon('bell', 'Open Notifications', async () => {
-			this.activateView()
+			await this.activateView()
 		});
 		this.ribbonIconEl.classList.add('badge-container');
-		this.updateBadge();
 
 		this.qs = new QueueStorage(this.basePath);
 
 		// @ts-ignore
-		new FileStructureState(this.app.vault.adapter.basePath, this.basePath, this.qs);
+		this.fileStructure = new FileStructureState(this.app.vault.adapter.basePath, this.basePath, this.qs);
+		await this.reloadView();
+	}
 
-		const isEmpty = await this.qs.isStorageEmpty();
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
+
+		await this.app.workspace.getLeaf(true).setViewState({
+			type: VIEW_TYPE_NOTIFICATION_DASHBOARD,
+			active: true
+		});
+		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
+	}
+
+	moveIconToBottom() {
+		const ribbonContainer = document.querySelector('.workspace-ribbon') as HTMLElement;
+		console.log("Moving icon to bottom.", ribbonContainer);
+
+		if (ribbonContainer) {
+			ribbonContainer.appendChild(this.ribbonIconEl);
+		}
+	}
+
+	async onFileRenamed() {
+		await  this.reloadView();
+	}
+
+	async reloadView() {
+		await this.fileStructure.main();
+
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
+
+		const isEmpty = await this.qs.getNotesCount() < 1;
 		if (isEmpty) {
 			await this.qs.pullNotesFromArchive();
 		}
@@ -36,8 +75,11 @@ export default class NotificationDashboardPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.qs)
 		)
 
-		// this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
+		this.moveIconToBottom();
 
+		await this.updateBadge();
+
+		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
 		this.addCommand({
 			id: 'open-notification-dashboard',
 			name: 'Open Notification Dashboard',
@@ -47,40 +89,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 		})
 	}
 
-	async activateView() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
+	async updateBadge() {
+		const unreadCount = await this.qs.getNotesCount();
 
-		await this.app.workspace.getLeaf(true).setViewState({
-			type: VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			active: true
-		});
-
-		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
-	}
-
-	 async onFileRenamed(file: TFile) {
-	 	if (file.extension === 'md') {
-	 		console.log(`File renamed: ${file.path}`);
-	 		console.log("File: ", file);
-
-	 		// @ts-ignore
-	 		const note: Note = {
-	 			id: "Test",
-	 			title: file.basename,
-	 			location: file.path,
-	 			reviewed: false,
-	 			tracked: true,
-	 			bookmarked: false,
-	 			last_reviewed: new Date().toLocaleDateString()
-	 		};
-
-	 		console.log("Note: ", note);
-	 		await this.qs.writeNoteToCSV([note], this.basePath + "/storage/notes.csv");
-	 	}
-	 }
-
-	updateBadge() {
-		const unreadCount = this.getUnreadNotificationCount(); // Implement this method to get the count of unread notifications
 		if (unreadCount > 0) {
 			let badgeEl = this.ribbonIconEl.querySelector('.badge');
 			if (!badgeEl) {
@@ -97,8 +108,4 @@ export default class NotificationDashboardPlugin extends Plugin {
 			}
 		}
 	};
-
-	getUnreadNotificationCount(): number {
-		return 5;
-	}
 }

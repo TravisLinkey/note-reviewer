@@ -1,3 +1,7 @@
 ID,TITLE,LOCATION,REVIEWED,TRACKED,BOOKMARKED,LAST_REVIEWED
 
-242d0e4e-c415-47af-8a6b-195b9242b16e,ANOTHER_SOMETHING.md,6 - Full Notes/ADR/ANOTHER_SOMETHING.md,false,true,false,7/18/2024
+9c0003b2-d971-45a6-a271-29baf9b10cb2,Note Reviewer.md,6 - Full Notes/Programming/Projects/Note Reviewer/Note Reviewer.md,false,true,false,7/19/2024
+a6e1fae9-3d74-484a-abb1-879c561492ed,Neovim.md,6 - Full Notes/Software/Neovim/Neovim.md,false,true,false,7/19/2024
+88afe1f0-99d8-4a58-8246-0799a8a63d38,Professional References.md,6 - Full Notes/Private/Professional/Professional References.md,false,true,false,7/19/2024
+6fe3de5f-7be0-4131-8aff-f759d670925d,LSP.md,0 - TODO/LSP.md,false,true,false,7/19/2024
+7c31d70c-cf0e-43d8-87b0-0c600fabed7a,Terraform.md,0 - TODO/Terraform.md,false,true,false,7/19/2024

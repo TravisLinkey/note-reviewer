@@ -15,33 +15,43 @@ const header = [
 ]
 
 export class QueueStorage {
-	private basePath: string;
-	private notesFile: string;
 	private archiveFile: string;
-	private favoritesFile: string;
-	private notesWriter: CsvWriter<any>;
 	private archiveWriter: CsvWriter<any>;
+	private basePath: string;
+	private favoritesFile: string;
+	private notesFile: string;
+	private notesWriter: CsvWriter<any>;
+	private oldStateFile: string;
 
 	constructor(basePath: string) {
-		this.basePath = basePath;
-		this.notesFile = this.basePath + "/storage/notes.csv";
 		this.archiveFile = this.basePath + "/storage/archive.csv";
+		this.basePath = basePath;
 		this.favoritesFile = this.basePath + "/storage/favorites.csv";
+		this.notesFile = this.basePath + "/storage/notes.csv";
+		this.oldStateFile = this.basePath + "/storage/oldState.txt";
 
 		this.initialize();
+	}
+
+	async getTopNNotes(n: number, filepath: string): Promise<Note[]> {
+		const notes = await this.readNotesFromCSV(filepath);
+		return notes.slice(0, n);
 	}
 
 	initialize() {
 		const storageDir = this.basePath + "/storage";
 		if (!fs.existsSync(storageDir)) {
 			fs.mkdirSync(storageDir, { recursive: true });
-			console.log(`Directory created: ${storageDir}`);
 		}
 		if (!fs.existsSync(this.notesFile)) {
 			fs.writeFileSync(this.notesFile, 'ID,TITLE,LOCATION,REVIEWED,TRACKED,BOOKMARKED,LAST_REVIEWED\n');
 		}
 		if (!fs.existsSync(this.archiveFile)) {
 			fs.writeFileSync(this.archiveFile, 'ID,TITLE,LOCATION,REVIEWED,TRACKED,BOOKMARKED,LAST_REVIEWED\n');
+		}
+		if (!fs.existsSync(this.oldStateFile)) {
+			// TODO - CRAWL THE ROOT - CREATE ARCHIVE NOTIFICATIONS
+			fs.writeFileSync(this.oldStateFile, '');
 		}
 
 		this.notesWriter = createObjectCsvWriter({
@@ -56,20 +66,33 @@ export class QueueStorage {
 		});
 	}
 
-	async writeNoteToCSV(notes: Note[], filepath: string): Promise<void> {
-		console.log("Writing to file");
-		try {
-			if (filepath === this.notesFile) {
-				await this.notesWriter.writeRecords(notes);
-				console.log('...wrote to notes file');
-			} else {
-				await this.archiveWriter.writeRecords(notes);
-				console.log('...wrote to archive file');
-			}
-		} catch (error) {
-			console.log("Error: ", error);
-		}
-	};
+	async getNotesCount(): Promise<number> {
+		const notes = await this.readNotesFromCSV(this.notesFile);
+		return notes.length;
+	}
+
+	async overwriteCsv(notes: Note[], filepath: string): Promise<void> {
+		const writer = createObjectCsvWriter({
+			path: filepath,
+			header
+		});
+
+		await writer.writeRecords(notes);
+	}
+
+	async pullNotesFromArchive(): Promise<void> {
+		const notes = await this.getTopNNotes(10, this.archiveFile);
+		await this.removeTopNNotes(10, this.archiveFile);
+		await this.writeNoteToCSV(notes, this.notesFile);
+	}
+
+	async pullNotesFromStorage(): Promise<Note[]> {
+		return await this.getTopNNotes(10, this.notesFile);
+	}
+
+	async pushNotesToArchive(notes: Note[]) {
+		await this.writeNoteToCSV(notes, this.archiveFile);
+	}
 
 	readNotesFromCSV = (filepath: string): Promise<Note[]> => {
 		return new Promise((resolve, reject) => {
@@ -96,14 +119,15 @@ export class QueueStorage {
 		})
 	}
 
-	async isStorageEmpty(): Promise<boolean> {
+	async removeSelectedNotesFromStorage(selectedIds: string[]): Promise<void> {
 		const notes = await this.readNotesFromCSV(this.notesFile);
-		return notes.length < 1;
-	}
+		const removedNotes = notes.filter(note => selectedIds.includes(note.id));
+		const remainingNotes = notes.filter(note => !selectedIds.includes(note.id));
 
-	async getTopNNotes(n: number, filepath: string): Promise<Note[]> {
-		const notes = await this.readNotesFromCSV(filepath);
-		return notes.slice(0, n);
+		console.log("Remaining notes: ", remainingNotes)
+
+		await this.overwriteCsv(remainingNotes, this.notesFile);
+		await this.writeNoteToCSV(removedNotes, this.archiveFile);
 	}
 
 	async removeTopNNotes(n: number, filepath: string): Promise<void> {
@@ -119,41 +143,23 @@ export class QueueStorage {
 
 	}
 
-	async removeSelectedNotesFromStorage(selectedIds: string[]): Promise<void> {
-		const notes = await this.readNotesFromCSV(this.notesFile);
-		const removedNotes = notes.filter(note => selectedIds.includes(note.id));
-		const remainingNotes = notes.filter(note => !selectedIds.includes(note.id));
+	async writeNoteToCSV(notes: Note[], filepath: string): Promise<void> {
+		if (notes.length < 1) {
+			return;
+		}
 
-		console.log("Remaining notes: ", remainingNotes)
-
-		await this.overwriteCsv(remainingNotes, this.notesFile);
-		await this.writeNoteToCSV(removedNotes, this.archiveFile);
-	}
-
-	async overwriteCsv(notes: Note[], filepath: string): Promise<void> {
-		const writer = createObjectCsvWriter({
-			path: filepath,
-			header
-		});
-
-		await writer.writeRecords(notes);
-	}
-
-	async pullNotesFromStorage(): Promise<Note[]> {
-		return await this.getTopNNotes(10, this.notesFile);
-	}
-
-	async pullNotesFromArchive(): Promise<void> {
-		const notes = await this.getTopNNotes(10, this.archiveFile);
-		await this.removeTopNNotes(10, this.archiveFile);
-
-		// TODO - only pull the notes that are older than some time frame
-
-		this.writeNoteToCSV(notes, this.notesFile);
-	}
-
-	async pushNotesToArchive(notes: Note[]) {
-		await this.writeNoteToCSV(notes, this.archiveFile);
-	}
+		console.log("Writing to file");
+		try {
+			if (filepath === this.notesFile) {
+				await this.notesWriter.writeRecords(notes);
+				console.log('...wrote to notes file');
+			} else {
+				await this.archiveWriter.writeRecords(notes);
+				console.log('...wrote to archive file');
+			}
+		} catch (error) {
+			console.log("Error: ", error);
+		}
+	};
 }
 

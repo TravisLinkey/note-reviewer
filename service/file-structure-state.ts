@@ -1,8 +1,8 @@
 import fs from "fs";
+import readline from "readline";
 import { QueueStorage } from "./queue-storage";
-import { TFile } from "obsidian";
 import { v4 as uuidv4 } from 'uuid';
-import { Note } from "controllers/notes";
+import { Note } from "main";
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -20,22 +20,22 @@ export class FileStructureState {
 	private notesFile: string;
 	private qs: QueueStorage;
 	private stateFile: string;
+	private tempFile: string;
 
 	constructor(obsidianRootDir: string, pluginRootDir: string, queueStorage: QueueStorage) {
 		this.basePath = obsidianRootDir;
 		this.archiveFile = pluginRootDir + "/storage/archive.csv";
 		this.notesFile = pluginRootDir + "/storage/notes.csv";
 		this.stateFile = pluginRootDir + "/storage/oldState.txt";
+		this.tempFile = pluginRootDir + "/storage/temp.csv";
 		this.qs = queueStorage;
-
-		this.main();
 	}
 
 	async main() {
+		// this.writeStateFile(JSON.stringify(this.currentState));
+		
 		this.currentState = this.buildFileStructure(this.basePath);
 		const oldState = this.getOldState();
-
-		// this.writeStateFile(this.currentState);
 
 		if (JSON.stringify(oldState) !== JSON.stringify(this.currentState)) {
 			console.log("They are different");
@@ -43,15 +43,11 @@ export class FileStructureState {
 			const diff = this.getDifference(oldState);
 			console.log("Difference: ", diff);
 
-			// TODO - create the new notifications
-			// await this.createNotifications(diff);
-
-			// this.clearArchives(diff);
-			
-			this.clearNotfications(diff);
+			await this.updateArchives(diff);
+			await this.updateNotifications(diff);
 
 			// replace old state file
-			// this.writeStateFile(JSON.stringify(this.currentState));
+			this.writeStateFile(JSON.stringify(this.currentState));
 		} else {
 			console.log("They are the same");
 		}
@@ -81,30 +77,42 @@ export class FileStructureState {
 		return result;
 	}
 
-	clearArchives(diff: FileStructureDiff) {
-		const csvContent = fs.readFileSync(this.archiveFile, "utf-8");
-		const lines = csvContent.split("\n").slice(1);
-
-		const filteredLines = lines.filter(line => !diff.removed.some(filePath => line.includes(filePath)))
-
-		console.log("Archives Filtered: ", filteredLines);
+	async updateArchives(diff: FileStructureDiff) {
+		await this.addNotificationsToStorage(diff);
+		await this.deleteRemovedFiles(this.archiveFile, diff.removed);
 	}
 
-	clearNotfications(diff: FileStructureDiff) {
-		const csvContent = fs.readFileSync(this.notesFile, "utf-8");
-		const lines = csvContent.split("\n");
-
-		const filteredLines = lines.filter(line => !diff.removed.some(filePath => line.includes(
-			filePath.replace(this.basePath, "").slice(1)
-		)))
-
-		const updatedCsvContent = filteredLines.join("\n");
-		console.log("UPDATED FILE: ", updatedCsvContent);
-
-		// TODO - dump this info back into notifications;
+	async updateNotifications(diff: FileStructureDiff) {
+		await this.deleteRemovedFiles(this.notesFile, diff.removed);
 	}
 
-	async createNotifications(diff: FileStructureDiff) {
+	async deleteRemovedFiles(inputFilePath: string, filesToRemove: string[]) {
+		if (!fs.existsSync(this.tempFile)) {
+			fs.writeFileSync(this.tempFile, 'ID,TITLE,LOCATION,REVIEWED,TRACKED,BOOKMARKED,LAST_REVIEWED\n');
+		}
+
+		const inputStream = fs.createReadStream(inputFilePath);
+		const outputStream = fs.createWriteStream(this.tempFile);
+		const rl = readline.createInterface({
+			input: inputStream,
+			crlfDelay: Infinity
+		});
+
+		for await (const line of rl) {
+			const shouldRemove = [...filesToRemove].some(filePath => line.includes(filePath))
+			console.log(`SHOULD REMOVE FROM ${inputFilePath}: `, shouldRemove, " FILEPATH: ", line);
+			if (!shouldRemove) {
+				outputStream.write(line + "\n")
+			}
+		}
+
+		outputStream.end();
+		console.log("CSV file updated successfully.");
+		fs.renameSync(this.tempFile, inputFilePath);
+	}
+
+
+	async addNotificationsToStorage(diff: FileStructureDiff) {
 		const allNotes: Note[] = [];
 
 		// add new notifications
@@ -126,7 +134,7 @@ export class FileStructureState {
 		 })
 
 		if (allNotes.length > 0) {
-			await this.qs.writeNoteToCSV(allNotes, this.basePath + "/storage/notes.csv");
+			await this.qs.writeNoteToCSV(allNotes, this.archiveFile);
 		}
 	}
 
@@ -157,7 +165,7 @@ export class FileStructureState {
 			oldKeys.forEach((key) => {
 				if (!newKeys.has(key)) {
 					const fullPath = parentPath ? `${parentPath}/${key}` : key;
-					diff.removed.push(fullPath);
+					diff.removed.push(fullPath.replace(this.basePath, "").substring(1));
 				}
 			})
 		}
