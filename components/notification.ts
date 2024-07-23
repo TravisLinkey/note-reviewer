@@ -102,8 +102,9 @@ export class NotificationComponent extends Component {
 		this.notificationEl.remove();
 	}
 
-	bookmarkNote() {
+	async bookmarkNote() {
 		console.log(`Bookmarking note: ${this.notification.id}`);
+		await this.db.bookmarkNotification(this.notification.id);
 	}
 
 	setCheckboxState(isChecked: boolean) {

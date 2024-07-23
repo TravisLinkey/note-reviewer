@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { Note } from 'main';
 import { addRxPlugin, createRxDatabase, removeRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
@@ -10,24 +9,20 @@ addRxPlugin(RxDBUpdatePlugin);
 export class DB {
 	private database: any;
 
-	async putBatchNotifications(records: Note[]) {
-		await this.database.notifications.bulkInsert(records);
-	}
-
 	async init() {
 		await removeRxDatabase('Notifications', getRxStorageDexie());
 		await this.createDatabase();
 	}
 
-	async test() {
-		const results = await this.getRecentlyReviewed(5, 1000);
-
-		console.log("Results: ");
-		for (let result of results) {
-			console.log(result.toJSON());
+	async bookmarkNotification(id: string) {
+		const doc = await this.database.notifications.findOne(id).exec();
+		if (doc) {
+			await doc.update({
+				$set: {
+					bookmarked: !doc.bookmarked 
+				}
+			});
 		}
-
-		console.log("LENGTH: ", results.length);
 	}
 
 	async createDatabase() {
@@ -43,27 +38,6 @@ export class DB {
 		})
 	}
 
-	async putNotification(notification: Note) {
-		await this.database.notifications.insert({
-			id: notification.id,
-			title: notification.title,
-			location: notification.location,
-			reviewed: false,
-			last_reviewed: notification.last_reviewed
-		});
-	}
-
-	async patchNotification(id: string) {
-		const doc = await this.database.notifications.findOne(id).exec();
-		if (doc) {
-			await doc.update({
-				$set: {
-					last_reviewed: new Date().toISOString()
-				}
-			});
-		}
-	}
-
 	async getAllNotifications() {
 		const results = await this.database.notifications.find().exec();
 		if (results) {
@@ -71,6 +45,17 @@ export class DB {
 		} else {
 			return null;
 		}
+	}
+
+	async getBookmarkedNotifications() {
+		const results = await this.database.notifications.find({
+			selector: {
+				bookmarked: true 
+			},
+			sort: [{ last_reviewed: 'desc' }],
+		}).exec();
+
+		return results;
 	}
 
 	async getNotificationByTitle(title: string) {
@@ -81,6 +66,21 @@ export class DB {
 		}).exec();
 
 		return doc.toJSON();
+	}
+
+	async getRecentlyReviewed(days: number = 15, limit: number = 10) {
+		const date = new Date();
+		date.setDate(date.getDate() - days);
+
+		const results = await this.database.notifications.find({
+			selector: {
+				last_reviewed: { $gte: date.toISOString() }
+			},
+			sort: [{ last_reviewed: 'desc' }],
+			limit: limit
+		}).exec();
+
+		return results;
 	}
 
 	async getUnreviewedNotifications(days: number = 15, limit: number = 10) {
@@ -98,19 +98,30 @@ export class DB {
 		return results;
 	}
 
-	async getRecentlyReviewed(days: number = 15, limit: number = 10) {
-		const date = new Date();
-		date.setDate(date.getDate() - days);
+	async patchNotification(id: string) {
+		const doc = await this.database.notifications.findOne(id).exec();
+		if (doc) {
+			await doc.update({
+				$set: {
+					last_reviewed: new Date().toISOString()
+				}
+			});
+		}
+	}
 
-		const results = await this.database.notifications.find({
-			selector: {
-				last_reviewed: { $gte: date.toISOString() }
-			},
-			sort: [{ last_reviewed: 'desc' }],
-			limit: limit
-		}).exec();
+	async putBatchNotifications(records: Note[]) {
+		await this.database.notifications.bulkInsert(records);
+	}
 
-		return results;
+	async putNotification(notification: Note) {
+		await this.database.notifications.insert({
+			id: notification.id,
+			title: notification.title,
+			location: notification.location,
+			bookmarked: false,
+			reviewed: false,
+			last_reviewed: notification.last_reviewed
+		});
 	}
 
 	async removeNotificationsByTitle(location: string) {

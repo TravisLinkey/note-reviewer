@@ -3,6 +3,7 @@ import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { Plugin, WorkspaceLeaf } from "obsidian"
 import { QueueStorage } from "service/queue-storage";
+import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 
 export interface Note {
 	id: string;
@@ -17,7 +18,7 @@ export interface Note {
 export default class NotificationDashboardPlugin extends Plugin {
 	// private qs: QueueStorage;
 	private db: DB;
-	
+
 	private notifications: Note[];
 	private ribbonIconEl: HTMLElement;
 	private basePath: string;
@@ -35,7 +36,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		this.db = new DB();
 		await this.db.init();
-		
+
 		// @ts-ignore
 		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
 		await this.fileStructure.init();
@@ -63,7 +64,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 	}
 
 	async onFileRenamed() {
-		await  this.reloadView();
+		await this.reloadView();
 	}
 
 	async reloadView() {
@@ -76,7 +77,13 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db)
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
+		)
+
+		const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
+		this.registerView(
+			VIEW_TYPE_BOOKMARKED_DASHBOARD,
+			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
 		)
 
 		this.moveIconToBottom();
@@ -91,6 +98,20 @@ export default class NotificationDashboardPlugin extends Plugin {
 				this.activateView();
 			}
 		})
+	}
+
+	async showBookmarkedNotifications() {
+		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
+		console.log("Existing leaf: ", existingLeaf);
+		if (!existingLeaf) {
+
+			await this.app.workspace.getLeaf(true).setViewState({
+				type: VIEW_TYPE_BOOKMARKED_DASHBOARD,
+				active: true
+			});
+		} else {
+			this.app.workspace.revealLeaf(existingLeaf);
+		}
 	}
 
 	// async updateBadge() {

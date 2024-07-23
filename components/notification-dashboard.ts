@@ -1,23 +1,25 @@
+import NotificationDashboardPlugin from 'main';
 import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Note } from 'controllers/notes';
 import { NotificationComponent } from './notification';
 import { dashboardStyle } from '../constants';
-import { notifications } from 'service/mock-notes';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
 export class NotificationDashboardView extends ItemView {
+	private db: DB;
 	private notes: Note[] = [];
 	private notifications: NotificationComponent[];
+	private plugin: NotificationDashboardPlugin;
 	private selectAllCheckboxEl: HTMLInputElement;
-	private db: DB;
 
-	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB) {
+	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB, plugin: NotificationDashboardPlugin) {
 		super(leaf);
+		this.db = db;
 		this.notes = notes;
 		this.notifications = [];
-		this.db = db;
+		this.plugin = plugin
 	}
 
 	getViewType(): string {
@@ -54,10 +56,15 @@ export class NotificationDashboardView extends ItemView {
 		// Main container
 		const container = contentEl.createEl('div', { cls: 'notification-dashboard' });
 
-		// Create "Fetch" button
+		// "Fetch" button
 		const fetchButton = container.createEl('button', { text: 'Fetch' });
 		fetchButton.addClass('button-margin');
 		fetchButton.addEventListener('click', () => this.fetchMoreNotifications());
+
+		// "Bookmark" button
+		const bookmarkButton = container.createEl('button', { text: 'Show Bookmarked' });
+		bookmarkButton.addClass('button-margin');
+		bookmarkButton.addEventListener('click', () => this.showBookmarkedNotifications());
 
 		// Header
 		const headerEl = container.createEl('div', { cls: 'notification-header' });
@@ -89,21 +96,6 @@ export class NotificationDashboardView extends ItemView {
 		this.initUI();
 	}
 
-	toggleSelectAll() {
-		try {
-			if (this.selectAllCheckboxEl) {
-				const isChecked = this.selectAllCheckboxEl.checked;
-				this.notifications.forEach((notification: NotificationComponent) => {
-					notification.setCheckboxState(isChecked);
-				});
-				this.updateDoneButtonVisibility();
-			}
-		} catch (error) {
-			console.log("Toggle Select All: ", error);
-		}
-	}
-
-
 	async markAllDone() {
 		const allIds: string[] = [];
 
@@ -122,8 +114,25 @@ export class NotificationDashboardView extends ItemView {
 		} catch (error) {
 			console.log("Mark all done: ", error)
 		}
+	}
 
-		// await this.db.test();
+	showBookmarkedNotifications () {
+		console.log("SHOWING BOOKMARKS");
+		this.plugin.showBookmarkedNotifications();
+	}
+
+	toggleSelectAll() {
+		try {
+			if (this.selectAllCheckboxEl) {
+				const isChecked = this.selectAllCheckboxEl.checked;
+				this.notifications.forEach((notification: NotificationComponent) => {
+					notification.setCheckboxState(isChecked);
+				});
+				this.updateDoneButtonVisibility();
+			}
+		} catch (error) {
+			console.log("Toggle Select All: ", error);
+		}
 	}
 
 	updateDoneButtonVisibility() {
