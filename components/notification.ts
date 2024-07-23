@@ -1,8 +1,7 @@
-import { createIcon, bookmarkIcon, viewIcon } from '../constants/index';
-import { Note } from 'controllers/notes';
 import { App, Component, TFile } from 'obsidian';
-import { QueueStorage } from 'service/queue-storage';
-import fs from 'fs';
+import { DB } from 'service/db';
+import { Note } from 'controllers/notes';
+import { createIcon, bookmarkIcon, viewIcon } from '../constants/index';
 
 export class NotificationComponent extends Component {
 	private app: App;
@@ -10,15 +9,20 @@ export class NotificationComponent extends Component {
 	private container: HTMLElement;
 	public notification: Note;
 	public notificationEl: HTMLElement;
-	private qs: QueueStorage;
+	private db: DB;
+
 	private checkboxEl: HTMLInputElement;
 
-	constructor(app: App, container: HTMLElement, notification: Note, qs: QueueStorage) {
+	// constructor(app: App, container: HTMLElement, notification: Note, qs: QueueStorage) {
+	constructor(app: App, container: HTMLElement, notification: Note, db: DB) {
 		super();
 		this.app = app;
 		this.notification = notification;
 		this.container = container;
-		this.qs = qs;
+
+		// this.qs = qs;
+		this.db = db;
+
 		this.render();
 	}
 
@@ -34,8 +38,8 @@ export class NotificationComponent extends Component {
 		titleEl.addEventListener('click', this.openNote.bind(this));
 
 		// Last Reviewed Label
-        const lastReviewedEl = notificationEl.createEl('div', { cls: 'notification-last-reviewed' });
-        lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
+		const lastReviewedEl = notificationEl.createEl('div', { cls: 'notification-last-reviewed' });
+		lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
 
 		// Buttons
 		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'notification-buttons-container' });
@@ -94,12 +98,13 @@ export class NotificationComponent extends Component {
 	}
 
 	async markDone() {
-		await this.qs.removeSelectedNotesFromStorage([this.notification.id]);
+		await this.db.patchNotification(this.notification.id);
 		this.notificationEl.remove();
 	}
 
-	bookmarkNote() {
+	async bookmarkNote() {
 		console.log(`Bookmarking note: ${this.notification.id}`);
+		await this.db.bookmarkNotification(this.notification.id);
 	}
 
 	setCheckboxState(isChecked: boolean) {
@@ -107,7 +112,10 @@ export class NotificationComponent extends Component {
 	}
 
 	isChecked() {
-		const checkboxEl = this.container.querySelector('.notification-checkbox') as HTMLInputElement;
-		return checkboxEl.checked;
+		try {
+			return this.checkboxEl.checked;
+		} catch (error) {
+			console.log("Is Checked: ", error)
+		}
 	}
 }

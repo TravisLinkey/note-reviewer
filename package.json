@@ -25,6 +25,8 @@
 		"csv-parser": "^3.0.0",
 		"csv-writer": "^1.6.0",
 		"obsidian": "latest",
+		"rxdb": "^15.28.1",
+		"rxjs": "^7.8.1",
 		"uuid": "^10.0.0"
 	}
 }

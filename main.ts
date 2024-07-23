@@ -1,7 +1,9 @@
+import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
-import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import { Plugin, WorkspaceLeaf } from "obsidian"
 import { QueueStorage } from "service/queue-storage";
+import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 
 export interface Note {
 	id: string;
@@ -14,7 +16,9 @@ export interface Note {
 }
 
 export default class NotificationDashboardPlugin extends Plugin {
-	private qs: QueueStorage;
+	// private qs: QueueStorage;
+	private db: DB;
+
 	private notifications: Note[];
 	private ribbonIconEl: HTMLElement;
 	private basePath: string;
@@ -22,17 +26,21 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 	async onload() {
 		// @ts-ignore
-		this.basePath = this.app.vault.adapter.basePath + "/.obsidian/plugins/note-reviewer";
+		const obsidianRootDirectory = this.app.vault.adapter.basePath;
+		this.basePath = obsidianRootDirectory + "/.obsidian/plugins/note-reviewer";
 
 		this.ribbonIconEl = this.addRibbonIcon('bell', 'Open Notifications', async () => {
 			await this.activateView()
 		});
 		this.ribbonIconEl.classList.add('badge-container');
 
-		this.qs = new QueueStorage(this.basePath);
+		this.db = new DB();
+		await this.db.init();
 
 		// @ts-ignore
-		this.fileStructure = new FileStructureState(this.app.vault.adapter.basePath, this.basePath, this.qs);
+		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
+		await this.fileStructure.init();
+
 		await this.reloadView();
 	}
 
@@ -56,28 +64,31 @@ export default class NotificationDashboardPlugin extends Plugin {
 	}
 
 	async onFileRenamed() {
-		await  this.reloadView();
+		await this.reloadView();
 	}
 
 	async reloadView() {
-		await this.fileStructure.main();
+		await this.fileStructure.init();
 
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
 
-		const isEmpty = await this.qs.getNotesCount() < 1;
-		if (isEmpty) {
-			await this.qs.pullNotesFromArchive();
-		}
-		this.notifications = await this.qs.pullNotesFromStorage();
+		this.notifications = await this.db.getUnreviewedNotifications(0, 100);
+		console.log("Notifications: ", this.notifications);
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.qs)
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
+		)
+
+		const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
+		this.registerView(
+			VIEW_TYPE_BOOKMARKED_DASHBOARD,
+			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
 		)
 
 		this.moveIconToBottom();
 
-		await this.updateBadge();
+		// await this.updateBadge();
 
 		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
 		this.addCommand({
@@ -89,23 +100,37 @@ export default class NotificationDashboardPlugin extends Plugin {
 		})
 	}
 
-	async updateBadge() {
-		const unreadCount = await this.qs.getNotesCount();
+	async showBookmarkedNotifications() {
+		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
+		console.log("Existing leaf: ", existingLeaf);
+		if (!existingLeaf) {
 
-		if (unreadCount > 0) {
-			let badgeEl = this.ribbonIconEl.querySelector('.badge');
-			if (!badgeEl) {
-				badgeEl = document.createElement('div');
-				badgeEl.className = 'badge';
-				this.ribbonIconEl.appendChild(badgeEl);
-			}
-			badgeEl.textContent = unreadCount < 10 ? unreadCount.toString() : "+";
-			badgeEl.classList.add('active');
+			await this.app.workspace.getLeaf(true).setViewState({
+				type: VIEW_TYPE_BOOKMARKED_DASHBOARD,
+				active: true
+			});
 		} else {
-			const badgeEl = this.ribbonIconEl.querySelector('.badge');
-			if (badgeEl) {
-				badgeEl.classList.remove('active');
-			}
+			this.app.workspace.revealLeaf(existingLeaf);
 		}
-	};
+	}
+
+	// async updateBadge() {
+	// 	const unreadCount = await this.qs.getNotesCount();
+
+	// 	if (unreadCount > 0) {
+	// 		let badgeEl = this.ribbonIconEl.querySelector('.badge');
+	// 		if (!badgeEl) {
+	// 			badgeEl = document.createElement('div');
+	// 			badgeEl.className = 'badge';
+	// 			this.ribbonIconEl.appendChild(badgeEl);
+	// 		}
+	// 		badgeEl.textContent = unreadCount < 10 ? unreadCount.toString() : "+";
+	// 		badgeEl.classList.add('active');
+	// 	} else {
+	// 		const badgeEl = this.ribbonIconEl.querySelector('.badge');
+	// 		if (badgeEl) {
+	// 			badgeEl.classList.remove('active');
+	// 		}
+	// 	}
+	// };
 }
