@@ -1,22 +1,23 @@
+import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import { NotificationComponent } from './notification';
 import { Note } from 'controllers/notes';
-import { QueueStorage } from 'service/queue-storage';
+import { NotificationComponent } from './notification';
 import { dashboardStyle } from '../constants';
+import { notifications } from 'service/mock-notes';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
 export class NotificationDashboardView extends ItemView {
 	private notes: Note[] = [];
 	private notifications: NotificationComponent[];
-	private qs: QueueStorage;
 	private selectAllCheckboxEl: HTMLInputElement;
+	private db: DB;
 
-	constructor(leaf: WorkspaceLeaf, notes: Note[], qs: QueueStorage) {
+	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB) {
 		super(leaf);
 		this.notes = notes;
-		this.notifications  = [];
-		this.qs = qs;
+		this.notifications = [];
+		this.db = db;
 	}
 
 	getViewType(): string {
@@ -38,6 +39,11 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	initUI() {
+		const notificationsContainer = this.containerEl.querySelector('.notification-dashboard');
+		if (notificationsContainer) {
+			notificationsContainer.remove();
+		}
+
 		const { contentEl } = this;
 
 		// Add a style block for custom styles
@@ -47,6 +53,11 @@ export class NotificationDashboardView extends ItemView {
 
 		// Main container
 		const container = contentEl.createEl('div', { cls: 'notification-dashboard' });
+
+		// Create "Fetch" button
+		const fetchButton = container.createEl('button', { text: 'Fetch' });
+		fetchButton.addClass('button-margin');
+		fetchButton.addEventListener('click', () => this.fetchMoreNotifications());
 
 		// Header
 		const headerEl = container.createEl('div', { cls: 'notification-header' });
@@ -67,32 +78,52 @@ export class NotificationDashboardView extends ItemView {
 
 		// Add notifications to the container
 		this.notes.forEach((notification: Note) => {
-			const elem = new NotificationComponent(this.app, container, notification, this.qs);
+			const elem = new NotificationComponent(this.app, container, notification, this.db);
 			this.notifications.push(elem);
 		});
 
 	}
 
+	async fetchMoreNotifications() {
+		this.notes = await this.db.getUnreviewedNotifications();
+		this.initUI();
+	}
+
 	toggleSelectAll() {
-		const isChecked = this.selectAllCheckboxEl.checked;
-		this.notifications.forEach((notification: NotificationComponent) => {
-			notification.setCheckboxState(isChecked);
-		});
-		this.updateDoneButtonVisibility();
+		try {
+			if (this.selectAllCheckboxEl) {
+				const isChecked = this.selectAllCheckboxEl.checked;
+				this.notifications.forEach((notification: NotificationComponent) => {
+					notification.setCheckboxState(isChecked);
+				});
+				this.updateDoneButtonVisibility();
+			}
+		} catch (error) {
+			console.log("Toggle Select All: ", error);
+		}
 	}
 
 
 	async markAllDone() {
 		const allIds: string[] = [];
 
-		this.notifications.map((notification: NotificationComponent) => {
-			if (notification.isChecked()) {
-				allIds.push(notification.notification.id);
-				notification.notificationEl.remove();
-			}
-		})
+		try {
+			this.notifications.map((notification: NotificationComponent) => {
+				if (notification && notification.isChecked()) {
+					allIds.push(notification.notification.id);
+					notification.notificationEl.remove();
+				}
+			})
+			const updatePromises = allIds.map(async (id: string) => {
+				await this.db.patchNotification(id);
+			});
 
-		await this.qs.removeSelectedNotesFromStorage(allIds);
+			await Promise.all(updatePromises);
+		} catch (error) {
+			console.log("Mark all done: ", error)
+		}
+
+		// await this.db.test();
 	}
 
 	updateDoneButtonVisibility() {
