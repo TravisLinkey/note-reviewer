@@ -2,7 +2,6 @@ import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { Plugin, WorkspaceLeaf } from "obsidian"
-import { QueueStorage } from "service/queue-storage";
 import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 
 export interface Note {
@@ -16,13 +15,11 @@ export interface Note {
 }
 
 export default class NotificationDashboardPlugin extends Plugin {
-	// private qs: QueueStorage;
+	private basePath: string;
 	private db: DB;
-
+	private fileStructure: FileStructureState;
 	private notifications: Note[];
 	private ribbonIconEl: HTMLElement;
-	private basePath: string;
-	private fileStructure: FileStructureState;
 
 	async onload() {
 		// @ts-ignore
@@ -113,24 +110,4 @@ export default class NotificationDashboardPlugin extends Plugin {
 			this.app.workspace.revealLeaf(existingLeaf);
 		}
 	}
-
-	// async updateBadge() {
-	// 	const unreadCount = await this.qs.getNotesCount();
-
-	// 	if (unreadCount > 0) {
-	// 		let badgeEl = this.ribbonIconEl.querySelector('.badge');
-	// 		if (!badgeEl) {
-	// 			badgeEl = document.createElement('div');
-	// 			badgeEl.className = 'badge';
-	// 			this.ribbonIconEl.appendChild(badgeEl);
-	// 		}
-	// 		badgeEl.textContent = unreadCount < 10 ? unreadCount.toString() : "+";
-	// 		badgeEl.classList.add('active');
-	// 	} else {
-	// 		const badgeEl = this.ribbonIconEl.querySelector('.badge');
-	// 		if (badgeEl) {
-	// 			badgeEl.classList.remove('active');
-	// 		}
-	// 	}
-	// };
 }

@@ -13,14 +13,11 @@ export class NotificationComponent extends Component {
 
 	private checkboxEl: HTMLInputElement;
 
-	// constructor(app: App, container: HTMLElement, notification: Note, qs: QueueStorage) {
 	constructor(app: App, container: HTMLElement, notification: Note, db: DB) {
 		super();
 		this.app = app;
 		this.notification = notification;
 		this.container = container;
-
-		// this.qs = qs;
 		this.db = db;
 
 		this.render();
