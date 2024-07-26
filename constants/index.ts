@@ -4,6 +4,8 @@ export const createIcon = 'M10 20l-5.293-5.293 1.414-1.414L10 17.172l8.879-8.879
 
 export const bookmarkIcon = 'M6 4c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v18l-7-3-7 3V4z';
 
+
+
 export const dashboardStyle = `
 		.notification-dashboard {
 			padding: 20px;

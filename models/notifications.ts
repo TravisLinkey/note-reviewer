@@ -1,4 +1,3 @@
-
 export const notificationsSchema = {
 	version: 0,
 	primaryKey: 'id',
@@ -29,7 +28,16 @@ export const notificationsSchema = {
 			type: 'string',
 			format: 'date-time'
 		},
+		tags: {
+			type: 'array',
+			items: {
+				type: 'string'
+			}
+		}
 	},
-	required: ['id', 'title', 'location', 'reviewed', 'last_reviewed']
+	required: ['id', 'title', 'location', 'reviewed', 'last_reviewed'],
+	indexes: [
+		{ title: 'location', unique: true }
+	]
 };
 

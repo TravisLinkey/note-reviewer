@@ -32,3 +32,29 @@
     margin-bottom: 10px; /* Adjust the margin size as needed */
 	margin-left: 5px;
 }
+
+/* CSS for the dropdown menu */
+.dropdown-menu {
+    position: absolute;
+    top: 100%; /* Position below the button */
+    left: 0;
+    background-color: var(--background-primary); /* Match the Obsidian theme */
+    border: 1px solid var(--background-modifier-border); /* Match the Obsidian theme */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-height: 200px; /* Limit the height */
+    overflow-y: auto; /* Add a scrollbar if the content is too tall */
+    width: 200px; /* Set a fixed width */
+    display: none; /* Initially hidden */
+}
+
+/* CSS for the dropdown items */
+.dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text-normal); /* Match the Obsidian theme */
+}
+
+.dropdown-item:hover {
+    background-color: var(--background-modifier-hover); /* Match the Obsidian theme */
+}

@@ -12,6 +12,12 @@ export interface Note {
 	tracked: boolean;
 	bookmarked: boolean;
 	last_reviewed: string;
+	tags: string[]
+}
+
+export interface Tag {
+	id: string;
+	title: string;
 }
 
 export default class NotificationDashboardPlugin extends Plugin {
@@ -36,29 +42,28 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		// @ts-ignore
 		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
-		await this.fileStructure.init();
 
 		await this.reloadView();
 	}
 
 	async activateView() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
-
-		await this.app.workspace.getLeaf(true).setViewState({
-			type: VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			active: true
-		});
-		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
-	}
-
-	moveIconToBottom() {
-		const ribbonContainer = document.querySelector('.workspace-ribbon') as HTMLElement;
-		console.log("Moving icon to bottom.", ribbonContainer);
-
-		if (ribbonContainer) {
-			ribbonContainer.appendChild(this.ribbonIconEl);
-		}
-	}
+ 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
+ 
+ 		await this.app.workspace.getLeaf(true).setViewState({
+ 			type: VIEW_TYPE_NOTIFICATION_DASHBOARD,
+ 			active: true
+ 		});
+ 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
+ 	}
+ 
+ 	moveIconToBottom() {
+ 		const ribbonContainer = document.querySelector('.workspace-ribbon') as HTMLElement;
+ 		console.log("Moving icon to bottom.", ribbonContainer);
+ 
+ 		if (ribbonContainer) {
+ 			ribbonContainer.appendChild(this.ribbonIconEl);
+ 		}
+ 	}
 
 	async onFileRenamed() {
 		await this.reloadView();
@@ -71,6 +76,10 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		this.notifications = await this.db.getUnreviewedNotifications(0, 100);
 		console.log("Notifications: ", this.notifications);
+		this.notifications.map((note) => {
+			// @ts-ignore
+			console.log(note.toJSON());
+		})
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
