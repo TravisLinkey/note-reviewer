@@ -12,6 +12,12 @@ export interface Note {
 	tracked: boolean;
 	bookmarked: boolean;
 	last_reviewed: string;
+	tags: string[]
+}
+
+export interface Tag {
+	id: string;
+	title: string;
 }
 
 export default class NotificationDashboardPlugin extends Plugin {
@@ -36,7 +42,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		// @ts-ignore
 		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
-		await this.fileStructure.init();
 
 		await this.reloadView();
 	}
@@ -59,7 +64,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 			ribbonContainer.appendChild(this.ribbonIconEl);
 		}
 	}
-
 	async onFileRenamed() {
 		await this.reloadView();
 	}
@@ -71,6 +75,10 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		this.notifications = await this.db.getUnreviewedNotifications(0, 100);
 		console.log("Notifications: ", this.notifications);
+		this.notifications.map((note) => {
+			// @ts-ignore
+			console.log(note.toJSON());
+		})
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,

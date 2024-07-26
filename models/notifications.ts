@@ -1,13 +1,9 @@
 
 export const notificationsSchema = {
 	version: 0,
-	primaryKey: 'id',
+	primaryKey: 'location',
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			maxLength: 10,
-		},
 		title: {
 			type: 'string',
 			maxLength: 45,
@@ -29,7 +25,13 @@ export const notificationsSchema = {
 			type: 'string',
 			format: 'date-time'
 		},
+		tags: {
+			type: 'array',
+			items: {
+				type: 'string'
+			}
+		}
 	},
-	required: ['id', 'title', 'location', 'reviewed', 'last_reviewed']
+	required: ['title', 'location', 'reviewed', 'last_reviewed']
 };
 
