@@ -43,11 +43,11 @@ export class DB {
 				storage: getRxStorageDexie(),
 				ignoreDuplicate: true
 			});
-		// 	this.tags = await createRxDatabase({
-		// 		name: "Tags",
-		// 		storage: getRxStorageDexie(),
-		// 		ignoreDuplicate: true
-		// 	});
+			this.tags = await createRxDatabase({
+				name: "Tags",
+				storage: getRxStorageDexie(),
+				ignoreDuplicate: true
+			});
 
 			if (!this.notifications.notifications) {
 				await this.notifications.addCollections({
@@ -57,13 +57,13 @@ export class DB {
 				})
 			}
 
-		// 	if (!this.tags.tags) {
-		// 		await this.tags.addCollections({
-		// 			tags: {
-		// 				schema: tagsSchema
-		// 			}
-		// 		})
-		// 	}
+			if (!this.tags.tags) {
+				await this.tags.addCollections({
+					tags: {
+						schema: tagsSchema
+					}
+				})
+			}
 
 		} catch (error) {
 			console.log("Error: ", error);

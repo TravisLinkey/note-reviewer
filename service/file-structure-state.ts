@@ -1,9 +1,7 @@
 import fs from "fs";
 import { DB } from "storage/db";
 import { Note } from "main";
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { warn } from "console";
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -34,6 +32,7 @@ export class FileStructureState {
 
 		added.forEach((filePath: string) => {
 			const note = {
+				id: uuidv4(),
 				title: filePath.split("/").pop(),
 				location: filePath,
 				reviewed: false,
@@ -41,6 +40,7 @@ export class FileStructureState {
 			} as Note;
 			notes.push(note);
 		})
+		console.log("ALL notes", notes);
 		await this.db.putBatchNotifications(notes);
 	}
 
@@ -75,6 +75,7 @@ export class FileStructureState {
 
 			const title = filePath.split("/").pop();
 			const note = {
+				id: uuidv4(),
 				title: title,
 				location: filePath.replace(this.basePath, "").substring(1),
 				reviewed: false,
@@ -195,9 +196,13 @@ export class FileStructureState {
 	async init() {
 		this.currentState = this.buildFileStructure(this.basePath);
 
+		console.log("GOT HERE");
+		console.log(this.currentState);
 		if (!fs.existsSync(this.stateFile)) {
-			await this.db.removeDatabase();
-			await this.db.createDatabases();
+
+			console.log("GOT HERE");
+			// await this.db.removeDatabase();
+			// await this.db.createDatabases();
 
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
@@ -211,6 +216,9 @@ export class FileStructureState {
 		const allFiles = this.findMarkdownFiles(this.basePath);
 		const allNotes = this.createAllNotes(allFiles);
 
+		console.log("All notes: ", allNotes);
+
+		console.log("CREATing everything");
 		await this.db.putBatchNotifications(allNotes);
 		console.log("CREATED ALL NOTES");
 	}
@@ -218,8 +226,11 @@ export class FileStructureState {
 	async initTagsDatabase() {
 		const array = [...this.allTags];
 		const allTags = array.map((tag: string) => ({
+			id: uuidv4(),
 			title: tag
 		}))
+
+		console.log("ALL TAGS: ", allTags);
 
 		await this.db.putBatchTags(allTags);
 	}

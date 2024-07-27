@@ -4,6 +4,10 @@ export const notificationsSchema = {
 	primaryKey: 'location',
 	type: 'object',
 	properties: {
+		id: {
+			type: 'string',
+			maxLength: 100,
+		},
 		title: {
 			type: 'string',
 			maxLength: 45,
