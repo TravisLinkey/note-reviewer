@@ -34,7 +34,6 @@ export class FileStructureState {
 
 		added.forEach((filePath: string) => {
 			const note = {
-				id: uuidv4(),
 				title: filePath.split("/").pop(),
 				location: filePath,
 				reviewed: false,
@@ -76,7 +75,6 @@ export class FileStructureState {
 
 			const title = filePath.split("/").pop();
 			const note = {
-				id: uuidv4(),
 				title: title,
 				location: filePath.replace(this.basePath, "").substring(1),
 				reviewed: false,

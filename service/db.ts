@@ -20,7 +20,7 @@ export class DB {
 
 	async removeDatabase() {
 		await removeRxDatabase('Notifications', getRxStorageDexie());
-		await removeRxDatabase('Tags', getRxStorageDexie());
+		// await removeRxDatabase('Tags', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(id: string) {
@@ -43,11 +43,11 @@ export class DB {
 				storage: getRxStorageDexie(),
 				ignoreDuplicate: true
 			});
-			this.tags = await createRxDatabase({
-				name: "Tags",
-				storage: getRxStorageDexie(),
-				ignoreDuplicate: true
-			});
+		// 	this.tags = await createRxDatabase({
+		// 		name: "Tags",
+		// 		storage: getRxStorageDexie(),
+		// 		ignoreDuplicate: true
+		// 	});
 
 			if (!this.notifications.notifications) {
 				await this.notifications.addCollections({
@@ -57,13 +57,13 @@ export class DB {
 				})
 			}
 
-			if (!this.tags.tags) {
-				await this.tags.addCollections({
-					tags: {
-						schema: tagsSchema
-					}
-				})
-			}
+		// 	if (!this.tags.tags) {
+		// 		await this.tags.addCollections({
+		// 			tags: {
+		// 				schema: tagsSchema
+		// 			}
+		// 		})
+		// 	}
 
 		} catch (error) {
 			console.log("Error: ", error);
@@ -173,7 +173,6 @@ export class DB {
 
 	async putNotification(notification: Note) {
 		await this.notifications.notifications.insert({
-			id: notification.id,
 			title: notification.title,
 			location: notification.location,
 			bookmarked: false,

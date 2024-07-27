@@ -5,7 +5,6 @@ import { Plugin, WorkspaceLeaf } from "obsidian"
 import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 
 export interface Note {
-	id: string;
 	title: string;
 	location: string;
 	reviewed: boolean;
@@ -16,7 +15,6 @@ export interface Note {
 }
 
 export interface Tag {
-	id: string;
 	title: string;
 }
 
