@@ -1,7 +1,7 @@
 
 export const notificationsSchema = {
 	version: 0,
-	primaryKey: 'location',
+	primaryKey: 'id',
 	type: 'object',
 	properties: {
 		id: {
@@ -15,6 +15,7 @@ export const notificationsSchema = {
 		location: {
 			type: 'string',
 			maxLength: 100,
+			unique: true
 		},
 		reviewed: {
 			type: 'boolean',

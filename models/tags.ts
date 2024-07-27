@@ -1,5 +1,5 @@
 export const tagsSchema = {
-	version: 1,
+	version: 7,
 	primaryKey: 'id',
 	type: 'object',
 	properties: {
@@ -9,6 +9,7 @@ export const tagsSchema = {
 		},
 		title: {
 			type: 'string',
+			minLength: 1,
 			maxLength: 45,
 			unique: true,
 		},

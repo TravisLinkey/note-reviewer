@@ -5,8 +5,10 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { notificationsSchema } from 'models/notifications';
 import { tagsSchema } from 'models/tags';
 import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
+import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 
-// addRxPlugin(RxDBMigrationSchemaPlugin);
+addRxPlugin(RxDBQueryBuilderPlugin);
+addRxPlugin(RxDBMigrationSchemaPlugin);
 addRxPlugin(RxDBUpdatePlugin);
 
 export class DB {
@@ -19,7 +21,7 @@ export class DB {
 	}
 
 	async removeDatabase() {
-		await removeRxDatabase('Notifications', getRxStorageDexie());
+		// await removeRxDatabase('Notifications', getRxStorageDexie());
 		// await removeRxDatabase('Tags', getRxStorageDexie());
 	}
 
@@ -46,24 +48,20 @@ export class DB {
 			this.tags = await createRxDatabase({
 				name: "Tags",
 				storage: getRxStorageDexie(),
-				ignoreDuplicate: true
+				ignoreDuplicate: false
 			});
 
-			if (!this.notifications.notifications) {
-				await this.notifications.addCollections({
-					notifications: {
-						schema: notificationsSchema
-					}
-				})
-			}
+			await this.notifications.addCollections({
+				notifications: {
+					schema: notificationsSchema
+				}
+			})
 
-			if (!this.tags.tags) {
-				await this.tags.addCollections({
-					tags: {
-						schema: tagsSchema
-					}
-				})
-			}
+			await this.tags.addCollections({
+				tagv2: {
+					schema: tagsSchema
+				}
+			})
 
 		} catch (error) {
 			console.log("Error: ", error);
@@ -81,7 +79,7 @@ export class DB {
 	}
 
 	async getAllTags() {
-		const results = await this.tags.tags.find().exec();
+		const results = await this.tags.tagv2.find().exec();
 		if (results) {
 			return results;
 		} else {
@@ -106,7 +104,7 @@ export class DB {
 				tags: { $in: [tag] }
 			}
 		})
-			// .sort({ last_reviewed: 'asc' })
+			.sort({ last_reviewed: 'asc' })
 			.exec();
 
 		return doc;
@@ -168,7 +166,7 @@ export class DB {
 	}
 
 	async putBatchTags(tags: Tag[]) {
-		await this.tags.tags.bulkInsert(tags);
+		await this.tags.tagv2.bulkInsert(tags);
 	}
 
 	async putNotification(notification: Note) {

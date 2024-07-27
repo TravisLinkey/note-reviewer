@@ -1,8 +1,8 @@
+import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { Plugin, WorkspaceLeaf } from "obsidian"
-import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "components/bookmarked-notification-dashboard";
 
 export interface Note {
 	id: string;
@@ -16,6 +16,7 @@ export interface Note {
 }
 
 export interface Tag {
+	id: string;
 	title: string;
 }
 
@@ -70,25 +71,26 @@ export default class NotificationDashboardPlugin extends Plugin {
 	async reloadView() {
 		await this.fileStructure.init();
 
-	// 	this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
+	 	this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
 
-	// 	this.notifications = await this.db.getUnreviewedNotifications(0, 100);
-	// 	console.log("Notifications: ", this.notifications);
-	// 	this.notifications.map((note) => {
-	// 		// @ts-ignore
-	// 		console.log(note.toJSON());
-	// 	})
+	 	// this.notifications = await this.db.getUnreviewedNotifications(0, 100);
+	 	this.notifications = await this.db.getAllNotifications();
+	 	console.log("Notifications: ", this.notifications);
+	 	this.notifications.map((note) => {
+	 		// @ts-ignore
+	 		console.log(note.toJSON());
+	 	})
 
-	// 	this.registerView(
-	// 		VIEW_TYPE_NOTIFICATION_DASHBOARD,
-	// 		(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
-	// 	)
+	 	this.registerView(
+	 		VIEW_TYPE_NOTIFICATION_DASHBOARD,
+	 		(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
+	 	)
 
-	// 	const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
-	// 	this.registerView(
-	// 		VIEW_TYPE_BOOKMARKED_DASHBOARD,
-	// 		(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
-	// 	)
+	 	const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
+	 	this.registerView(
+	 		VIEW_TYPE_BOOKMARKED_DASHBOARD,
+	 		(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
+	 	)
 
 	// 	this.moveIconToBottom();
 

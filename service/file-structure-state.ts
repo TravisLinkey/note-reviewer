@@ -17,12 +17,14 @@ export class FileStructureState {
 	private currentState: FileStructure;
 	private db: DB;
 	private stateFile: string;
+	private storageFolder: string;
 	public allTags: Set<string>;
 
 	constructor(obsidianRootDir: string, pluginRootDir: string, db: DB) {
 		this.allTags = new Set();
 		this.basePath = obsidianRootDir;
 		this.db = db;
+		this.storageFolder = pluginRootDir + '/storage/';
 		this.stateFile = pluginRootDir + "/storage/oldState.txt";
 	}
 
@@ -198,7 +200,7 @@ export class FileStructureState {
 
 		console.log("GOT HERE");
 		console.log(this.currentState);
-		if (!fs.existsSync(this.stateFile)) {
+		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
 
 			console.log("GOT HERE");
 			// await this.db.removeDatabase();
@@ -209,6 +211,7 @@ export class FileStructureState {
 			this.writeStateFile(JSON.stringify(this.currentState));
 		} else {
 			this.detectStatefileUpdates();
+
 		}
 	}
 
@@ -224,13 +227,15 @@ export class FileStructureState {
 	}
 
 	async initTagsDatabase() {
-		const array = [...this.allTags];
+		const array = [...new Set(this.allTags)];
+
+		console.log("ALL TAGS: ", array);
 		const allTags = array.map((tag: string) => ({
 			id: uuidv4(),
 			title: tag
 		}))
 
-		console.log("ALL TAGS: ", allTags);
+		// console.log("ALL TAGS: ", allTags);
 
 		await this.db.putBatchTags(allTags);
 	}
@@ -247,6 +252,10 @@ export class FileStructureState {
 	}
 
 	writeStateFile(state: string): void {
-		fs.writeFileSync(this.stateFile, state);
+		try {
+			fs.writeFileSync(this.stateFile, state);
+		} catch (error) {
+			console.log("Error: ", error);
+		}
 	}
 }

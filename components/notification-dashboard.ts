@@ -3,6 +3,7 @@ import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Note } from 'controllers/notes';
 import { NotificationComponent } from './notification';
+import { Tag } from '../main';
 import { dashboardStyle } from '../constants';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
@@ -15,6 +16,7 @@ export class NotificationDashboardView extends ItemView {
 	private notifications: NotificationComponent[];
 	private plugin: NotificationDashboardPlugin;
 	private selectAllCheckboxEl: HTMLInputElement;
+	private selectedTag: string;
 	private selectedTagLabel: HTMLSpanElement;
 
 	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB, plugin: NotificationDashboardPlugin) {
@@ -24,6 +26,7 @@ export class NotificationDashboardView extends ItemView {
 		this.notifications = [];
 		this.allTags = [];
 		this.plugin = plugin
+		this.selectedTag = "None";
 	}
 
 	getViewType(): string {
@@ -93,7 +96,7 @@ export class NotificationDashboardView extends ItemView {
 		this.dropdownMenu = dropdownContainer.createEl('div', { cls: 'dropdown-menu' });
 
 		// Create a label for the selected tag
-		this.selectedTagLabel = container.createEl('span', { text: 'Selected Tag: None' });
+		this.selectedTagLabel = container.createEl('span', { text: `Selected Tag: ${this.selectedTag}` });
 		this.selectedTagLabel.style.marginLeft = '10px';
 		this.selectedTagLabel.style.display = 'inline-block';
 		this.selectedTagLabel.style.verticalAlign = 'middle';
@@ -143,6 +146,7 @@ export class NotificationDashboardView extends ItemView {
 
 	async filterNotificationsByTag(tag: string) {
 		console.log("Tag: ", tag);
+		this.selectedTag = tag;
 		this.dropdownMenu.style.display = 'none';
 		this.selectedTagLabel.textContent = `Selected Tag: ${tag}`;
 
