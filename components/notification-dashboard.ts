@@ -3,23 +3,30 @@ import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Note } from 'controllers/notes';
 import { NotificationComponent } from './notification';
+import { Tag } from '../main';
 import { dashboardStyle } from '../constants';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
 export class NotificationDashboardView extends ItemView {
+	private allTags: string[];
 	private db: DB;
+	private dropdownMenu: HTMLDivElement;
 	private notes: Note[] = [];
 	private notifications: NotificationComponent[];
 	private plugin: NotificationDashboardPlugin;
 	private selectAllCheckboxEl: HTMLInputElement;
+	private selectedTag: string;
+	private selectedTagLabel: HTMLSpanElement;
 
 	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB, plugin: NotificationDashboardPlugin) {
 		super(leaf);
 		this.db = db;
 		this.notes = notes;
 		this.notifications = [];
+		this.allTags = [];
 		this.plugin = plugin
+		this.selectedTag = "None";
 	}
 
 	getViewType(): string {
@@ -31,6 +38,15 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async onOpen() {
+		const tags = await this.db.getAllTags();
+
+		tags.map((tag: Tag) => {
+			// @ts-ignore
+			const t = tag.toJSON();
+			this.allTags.push(t.title);
+		})
+
+		console.log('ALL TAGS: ', this.allTags.sort());
 		this.initUI();
 	}
 
@@ -66,6 +82,38 @@ export class NotificationDashboardView extends ItemView {
 		bookmarkButton.addClass('button-margin');
 		bookmarkButton.addEventListener('click', () => this.showBookmarkedNotifications());
 
+		// Create a container for the dropdown button and menu
+		const dropdownContainer = container.createEl('div', { cls: 'dropdown-container' });
+		dropdownContainer.style.position = 'relative';
+		dropdownContainer.style.display = 'inline-block';
+		dropdownContainer.style.marginBottom = '10px'; // Adjust the margin size as needed
+
+		// Create "Tags" dropdown button
+		const dropdownButton = dropdownContainer.createEl('button', { text: 'Filter' });
+		dropdownButton.style.marginLeft = '5px';
+
+		// Create the dropdown menu container
+		this.dropdownMenu = dropdownContainer.createEl('div', { cls: 'dropdown-menu' });
+
+		// Create a label for the selected tag
+		this.selectedTagLabel = container.createEl('span', { text: `Selected Tag: ${this.selectedTag}` });
+		this.selectedTagLabel.style.marginLeft = '10px';
+		this.selectedTagLabel.style.display = 'inline-block';
+		this.selectedTagLabel.style.verticalAlign = 'middle';
+
+		// Populate dropdown menu with tags
+		this.allTags.forEach((tag: string) => {
+			const tagItem = this.dropdownMenu.createEl('div', { text: tag, cls: 'dropdown-item' });
+			tagItem.addEventListener('click', () => {
+				this.filterNotificationsByTag(tag);
+			});
+		});
+
+		// Toggle dropdown visibility
+		dropdownButton.addEventListener('click', () => {
+			this.dropdownMenu.style.display = this.dropdownMenu.style.display === 'none' ? 'block' : 'none';
+		});
+
 		// Header
 		const headerEl = container.createEl('div', { cls: 'notification-header' });
 
@@ -96,6 +144,17 @@ export class NotificationDashboardView extends ItemView {
 		this.initUI();
 	}
 
+	async filterNotificationsByTag(tag: string) {
+		console.log("Tag: ", tag);
+		this.selectedTag = tag;
+		this.dropdownMenu.style.display = 'none';
+		this.selectedTagLabel.textContent = `Selected Tag: ${tag}`;
+
+		// TODO - get the relevant notifications
+		this.notes = await this.db.getNotificationByTag(tag);
+		this.initUI();
+	}
+
 	async markAllDone() {
 		const allIds: string[] = [];
 
@@ -116,7 +175,7 @@ export class NotificationDashboardView extends ItemView {
 		}
 	}
 
-	showBookmarkedNotifications () {
+	showBookmarkedNotifications() {
 		console.log("SHOWING BOOKMARKS");
 		this.plugin.showBookmarkedNotifications();
 	}

@@ -6,7 +6,7 @@ export const notificationsSchema = {
 	properties: {
 		id: {
 			type: 'string',
-			maxLength: 10,
+			maxLength: 100,
 		},
 		title: {
 			type: 'string',
@@ -15,6 +15,7 @@ export const notificationsSchema = {
 		location: {
 			type: 'string',
 			maxLength: 100,
+			unique: true
 		},
 		reviewed: {
 			type: 'boolean',
@@ -29,7 +30,13 @@ export const notificationsSchema = {
 			type: 'string',
 			format: 'date-time'
 		},
+		tags: {
+			type: 'array',
+			items: {
+				type: 'string'
+			}
+		}
 	},
-	required: ['id', 'title', 'location', 'reviewed', 'last_reviewed']
+	required: ['title', 'location', 'reviewed', 'last_reviewed']
 };
 

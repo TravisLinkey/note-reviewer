@@ -51,8 +51,6 @@ export class BookmarkedNotificationView extends ItemView {
 		// Fetch and render bookmarked notifications
 		this.notes = await this.db.getBookmarkedNotifications();
 
-		console.log("BOOKMARKED: ", this.notes);
-
 		// Add notifications to the container
 		this.notes.forEach((notification: Note) => {
 			const elem = new NotificationComponent(this.app, container, notification, this.db);

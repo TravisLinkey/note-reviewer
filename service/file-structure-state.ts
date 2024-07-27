@@ -1,9 +1,7 @@
 import fs from "fs";
-import readline from "readline";
-import { QueueStorage } from "./queue-storage";
-import { v4 as uuidv4 } from 'uuid';
-import { Note } from "main";
 import { DB } from "storage/db";
+import { Note } from "main";
+import { v4 as uuidv4 } from 'uuid';
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -15,59 +13,76 @@ interface FileStructureDiff {
 }
 
 export class FileStructureState {
-	private archiveFile: string;
 	private basePath: string;
 	private currentState: FileStructure;
-	private notesFile: string;
-	// private fs: FileStructureState;
-
 	private db: DB;
-
 	private stateFile: string;
-	private tempFile: string;
+	private storageFolder: string;
+	public allTags: Set<string>;
 
 	constructor(obsidianRootDir: string, pluginRootDir: string, db: DB) {
+		this.allTags = new Set();
 		this.basePath = obsidianRootDir;
-		this.archiveFile = pluginRootDir + "/storage/archive.csv";
-		this.notesFile = pluginRootDir + "/storage/notes.csv";
-		this.stateFile = pluginRootDir + "/storage/oldState.txt";
-		this.tempFile = pluginRootDir + "/storage/temp.csv";
-
 		this.db = db;
+		this.storageFolder = pluginRootDir + '/storage/';
+		this.stateFile = pluginRootDir + "/storage/oldState.txt";
 	}
 
-	async init() {
-		this.currentState = this.buildFileStructure(this.basePath);
 
-		if (!fs.existsSync(this.stateFile)) {
-			// await this.db.createDatabase();
-			await this.initDatabaseWithNotifications();
-			this.writeStateFile(JSON.stringify(this.currentState));
-		} else {
-			this.detectStatefileUpdates();
-		}
+	async addNewFileToDatabase(added: string[]) {
+		const notes: Note[] = [];
+
+		added.forEach((filePath: string) => {
+			const note = {
+				id: uuidv4(),
+				title: filePath.split("/").pop(),
+				location: filePath,
+				reviewed: false,
+				last_reviewed: new Date('2023-01-01').toISOString()
+			} as Note;
+			notes.push(note);
+		})
+		console.log("ALL notes", notes);
+		await this.db.putBatchNotifications(notes);
 	}
 
-	async initDatabaseWithNotifications() {
-		const allFiles = this.findMarkdownFiles(this.basePath);
-		const allNotes = this.createAllNotes(allFiles);
+	/* A method to create the current file structure state file*/
+	buildFileStructure(dirPath: string): FileStructure {
+		const result: FileStructure = {};
+		const directories = fs.readdirSync(dirPath);
 
-		console.log("ALL NOTES: ", allNotes);
-		await this.db.putBatchNotifications(allNotes);
-		console.log("CREATED ALL NOTES");
+		directories.forEach((directory) => {
+			if (!directory.startsWith(".")) {
+				const path = dirPath + "/" + directory;
+				const stats = fs.statSync(path);
 
+				if (stats.isDirectory()) {
+					result[directory] = this.buildFileStructure(path);
+				}
+				else {
+					result[directory] = null;
+				}
+			}
+		})
+
+		return result;
 	}
 
 	createAllNotes(allNotes: string[]): Note[] {
 		const notes: Note[] = [];
 
 		allNotes.forEach((filePath: string) => {
+			const content = fs.readFileSync(filePath, 'utf-8');
+			const tags = this.extractTagsFromMarkdown(content);
+
+			const title = filePath.split("/").pop();
 			const note = {
 				id: uuidv4(),
-				title: filePath.split("/").pop(),
+				title: title,
 				location: filePath.replace(this.basePath, "").substring(1),
 				reviewed: false,
-				last_reviewed: new Date('2023-01-01').toISOString()
+				last_reviewed: new Date('2023-01-01').toISOString(),
+				tags
 			} as Note;
 			notes.push(note);
 		})
@@ -93,6 +108,28 @@ export class FileStructureState {
 		}
 	}
 
+	extractTagsFromMarkdown = (content: string): string[] => {
+		const lines = content.split('\n').slice(0, 10);
+		const tagPattern = /Tags:\s*((\[\[.*?\]\]\s*\|?\s*)+)/;
+		const tagExtractPattern = /\[\[(.*?)\]\]/g;
+		const tags = [];
+
+		for (const line of lines) {
+			const match = line.match(tagPattern);
+			if (match) {
+				let tagMatch;
+				while ((tagMatch = tagExtractPattern.exec(match[1])) !== null) {
+					tags.push(tagMatch[1]);
+				}
+				break;
+			}
+		}
+
+		tags.forEach(tag => this.allTags.add(tag));
+
+		return tags;
+	};
+
 	findMarkdownFiles(dir: string): string[] {
 		let results: string[] = [];
 		const directories = fs.readdirSync(dir);
@@ -113,60 +150,6 @@ export class FileStructureState {
 		})
 
 		return results;
-	}
-
-
-	/* A method to create the current file structure state file*/
-	buildFileStructure(dirPath: string): FileStructure {
-		const result: FileStructure = {};
-		const directories = fs.readdirSync(dirPath);
-
-		directories.forEach((directory) => {
-			if (!directory.startsWith(".")) {
-				const path = dirPath + "/" + directory;
-				const stats = fs.statSync(path);
-
-				if (stats.isDirectory()) {
-					result[directory] = this.buildFileStructure(path);
-				}
-				else {
-					result[directory] = null;
-				}
-			}
-		})
-
-		return result;
-	}
-
-	async updateFilesInDatabase(diff: FileStructureDiff) {
-		await this.addNewFileToDatabase(diff.added);
-		await this.removeOldFileFromDatabase(diff.removed);
-	}
-
-	async removeOldFileFromDatabase(filesToRemove: string[]) {
-		filesToRemove.forEach(async (fileTitle: string) => {
-			await this.db.removeNotificationsByTitle(fileTitle)
-		})
-	}
-
-
-	async addNewFileToDatabase(added: string[]) {
-		const notes: Note[] = [];
-
-		added.forEach((filePath: string) => {
-			const note = {
-				id: uuidv4(),
-				title: filePath.split("/").pop(),
-				location: filePath,
-				reviewed: false,
-				last_reviewed: new Date('2023-01-01').toISOString()
-			} as Note;
-			notes.push(note);
-		})
-		console.log("ADDED: ", added);
-
-		console.log("ALL NOTES: ", notes);
-		await this.db.putBatchNotifications(notes);
 	}
 
 	/* A method to get the difference between old and new file structures */
@@ -212,7 +195,67 @@ export class FileStructureState {
 		return JSON.parse(fileContent)
 	}
 
+	async init() {
+		this.currentState = this.buildFileStructure(this.basePath);
+
+		console.log("GOT HERE");
+		console.log(this.currentState);
+		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
+
+			console.log("GOT HERE");
+			// await this.db.removeDatabase();
+			// await this.db.createDatabases();
+
+			await this.initNotificationsDatabase();
+			await this.initTagsDatabase();
+			this.writeStateFile(JSON.stringify(this.currentState));
+		} else {
+			this.detectStatefileUpdates();
+
+		}
+	}
+
+	async initNotificationsDatabase() {
+		const allFiles = this.findMarkdownFiles(this.basePath);
+		const allNotes = this.createAllNotes(allFiles);
+
+		console.log("All notes: ", allNotes);
+
+		console.log("CREATing everything");
+		await this.db.putBatchNotifications(allNotes);
+		console.log("CREATED ALL NOTES");
+	}
+
+	async initTagsDatabase() {
+		const array = [...new Set(this.allTags)];
+
+		console.log("ALL TAGS: ", array);
+		const allTags = array.map((tag: string) => ({
+			id: uuidv4(),
+			title: tag
+		}))
+
+		// console.log("ALL TAGS: ", allTags);
+
+		await this.db.putBatchTags(allTags);
+	}
+
+	async removeOldFileFromDatabase(filesToRemove: string[]) {
+		filesToRemove.forEach(async (fileTitle: string) => {
+			await this.db.removeNotificationsByTitle(fileTitle)
+		})
+	}
+
+	async updateFilesInDatabase(diff: FileStructureDiff) {
+		await this.addNewFileToDatabase(diff.added);
+		await this.removeOldFileFromDatabase(diff.removed);
+	}
+
 	writeStateFile(state: string): void {
-		fs.writeFileSync(this.stateFile, state);
+		try {
+			fs.writeFileSync(this.stateFile, state);
+		} catch (error) {
+			console.log("Error: ", error);
+		}
 	}
 }

@@ -86,7 +86,6 @@ export class NotificationComponent extends Component {
 
 	openNote() {
 		const file = this.app.vault.getAbstractFileByPath(this.notification.location);
-		console.log("FILE: ", file);
 		if (file instanceof TFile) {
 			this.app.workspace.getLeaf(true).openFile(file, { state: { mode: 'preview' } });
 		} else {
