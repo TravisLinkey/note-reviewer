@@ -33,12 +33,20 @@ export class FileStructureState {
 		const notes: Note[] = [];
 
 		added.forEach((filePath: string) => {
+			console.log("LOCATION: ", filePath);
+			const content = fs.readFileSync(this.basePath + "/" + filePath, 'utf-8');
+			const tags = this.extractTagsFromMarkdown(content);
+
+			console.log("LOCATION: ", filePath);
+
+			const title = filePath.split("/").pop();
 			const note = {
 				id: uuidv4(),
-				title: filePath.split("/").pop(),
+				title,
 				location: filePath,
 				reviewed: false,
-				last_reviewed: new Date('2023-01-01').toISOString()
+				last_reviewed: new Date('2023-01-01').toISOString(),
+				tags
 			} as Note;
 			notes.push(note);
 		})
@@ -78,7 +86,7 @@ export class FileStructureState {
 			const title = filePath.split("/").pop();
 			const note = {
 				id: uuidv4(),
-				title: title,
+				title,
 				location: filePath.replace(this.basePath, "").substring(1),
 				reviewed: false,
 				last_reviewed: new Date('2023-01-01').toISOString(),
@@ -198,32 +206,23 @@ export class FileStructureState {
 	async init() {
 		this.currentState = this.buildFileStructure(this.basePath);
 
-		console.log("GOT HERE");
 		console.log(this.currentState);
 		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
-
-			console.log("GOT HERE");
-			// await this.db.removeDatabase();
-			// await this.db.createDatabases();
+			await this.db.removeDatabase();
+			await this.db.createDatabases();
 
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 			this.writeStateFile(JSON.stringify(this.currentState));
 		} else {
 			this.detectStatefileUpdates();
-
 		}
 	}
 
 	async initNotificationsDatabase() {
 		const allFiles = this.findMarkdownFiles(this.basePath);
 		const allNotes = this.createAllNotes(allFiles);
-
-		console.log("All notes: ", allNotes);
-
-		console.log("CREATing everything");
 		await this.db.putBatchNotifications(allNotes);
-		console.log("CREATED ALL NOTES");
 	}
 
 	async initTagsDatabase() {
@@ -235,20 +234,38 @@ export class FileStructureState {
 			title: tag
 		}))
 
-		// console.log("ALL TAGS: ", allTags);
-
 		await this.db.putBatchTags(allTags);
 	}
 
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
+		const oldTags: string[] = [];
 		filesToRemove.forEach(async (fileTitle: string) => {
+			// TODO - get each notification to be removed
+			console.log('File title: ', fileTitle);
+			const notification = await this.db.getNotificationByLocation(fileTitle);
+
+			console.log("NOTE: ", notification);
+			oldTags.push(...notification.tags);
+			console.log("TAGS: ", oldTags);
+
+			oldTags.forEach(async (tag: string) => {
+				const notifications = await this.db.getNotificationByTag(tag);
+				console.log("FOUND NOTIFICATIONS: ", notifications)
+				if (notifications.length < 1) {
+					await this.db.removeTagByTitle(tag);
+				}
+			})
+
 			await this.db.removeNotificationsByTitle(fileTitle)
 		})
+
 	}
 
 	async updateFilesInDatabase(diff: FileStructureDiff) {
 		await this.addNewFileToDatabase(diff.added);
 		await this.removeOldFileFromDatabase(diff.removed);
+
+		// TODO - scan this file for tags
 	}
 
 	writeStateFile(state: string): void {

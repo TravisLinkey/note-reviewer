@@ -41,9 +41,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 		await this.db.init();
 
 		// @ts-ignore
-	 	this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
+		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
 
-	 	await this.reloadView();
+		await this.reloadView();
 	}
 
 	async activateView() {
@@ -71,39 +71,40 @@ export default class NotificationDashboardPlugin extends Plugin {
 	async reloadView() {
 		await this.fileStructure.init();
 
-	 	this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
 
-	 	// this.notifications = await this.db.getUnreviewedNotifications(0, 100);
-	 	this.notifications = await this.db.getAllNotifications();
-	 	console.log("Notifications: ", this.notifications);
-	 	this.notifications.map((note) => {
-	 		// @ts-ignore
-	 		console.log(note.toJSON());
-	 	})
+		// this.notifications = await this.db.getUnreviewedNotifications(0, 100);
+		this.notifications = await this.db.getAllNotifications();
+		this.notifications.map((note) => {
+			if (note.title.includes('Ideas')) {
+				// @ts-ignore
+				console.log(note.toJSON());
+			}
+		})
 
-	 	this.registerView(
-	 		VIEW_TYPE_NOTIFICATION_DASHBOARD,
-	 		(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
-	 	)
+		this.registerView(
+			VIEW_TYPE_NOTIFICATION_DASHBOARD,
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
+		)
 
-	 	const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
-	 	this.registerView(
-	 		VIEW_TYPE_BOOKMARKED_DASHBOARD,
-	 		(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
-	 	)
+		const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
+		this.registerView(
+			VIEW_TYPE_BOOKMARKED_DASHBOARD,
+			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
+		)
 
-	// 	this.moveIconToBottom();
+		// 	this.moveIconToBottom();
 
-	// 	// await this.updateBadge();
+		// 	// await this.updateBadge();
 
-	// 	this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
-	// 	this.addCommand({
-	// 		id: 'open-notification-dashboard',
-	// 		name: 'Open Notification Dashboard',
-	// 		callback: () => {
-	// 			this.activateView();
-	// 		}
-	// 	})
+		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
+		this.addCommand({
+			id: 'open-notification-dashboard',
+			name: 'Open Notification Dashboard',
+			callback: () => {
+				this.activateView();
+			}
+		})
 	}
 
 	async showBookmarkedNotifications() {

@@ -28,12 +28,30 @@
     cursor: default; /* Ensure the default cursor for the container */
 }
 
+.bookmark-button {
+    margin-left: 10px;
+}
+
+.button-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
 .button-margin {
     margin-bottom: 10px; /* Adjust the margin size as needed */
 	margin-left: 5px;
+	width: 100px;
 }
 
 /* CSS for the dropdown menu */
+.dropdown-container {
+	position: relative;
+	display: inline-block;
+	margin-bottom: 10px;
+}
+
 .dropdown-menu {
     position: absolute;
     top: 100%; /* Position below the button */
@@ -57,4 +75,23 @@
 
 .dropdown-item:hover {
     background-color: var(--background-modifier-hover); /* Match the Obsidian theme */
+}
+
+.fetch-button {
+    background-color: #5a45b5; /* Darker shade for hover effect */
+    color: white; /* Ensure text is readable */
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.fetch-button:hover {
+    background-color: #5a45b5; /* Darker shade for hover effect */
+}
+
+.selected-tag-label {
+	margin-left: 10px;
+	display: 'inline-block';
+	vertical-align: 'middle';
 }

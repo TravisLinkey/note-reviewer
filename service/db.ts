@@ -16,8 +16,8 @@ export class DB {
 	private tags: any;
 
 	async init() {
-		await this.removeDatabase();
-		await this.createDatabases();
+	// 	await this.removeDatabase();
+	 	await this.createDatabases();
 	}
 
 	async removeDatabase() {
@@ -37,8 +37,6 @@ export class DB {
 	}
 
 	async createDatabases() {
-		// TODO - get database if it already exists
-
 		try {
 			this.notifications = await createRxDatabase({
 				name: "Notifications",
@@ -92,17 +90,29 @@ export class DB {
 			selector: {
 				bookmarked: true
 			},
-			sort: [{ last_reviewed: 'desc' }],
+			sort: [{ last_reviewed: 'asc' }],
 		}).exec();
 
 		return results;
 	}
 
-	async getNotificationByTag(tag: string) {
+
+	async getNotificationByLocation(location: string) {
+		const doc = await this.notifications.notifications.findOne({
+			selector: {
+				location: location
+			}
+		}).exec();
+
+		return doc.toJSON();
+	}
+
+	async getNotificationByTag(tag: string, limit: number = 50) {
 		const doc = await this.notifications.notifications.find({
 			selector: {
-				tags: { $in: [tag] }
-			}
+				tags: { $in: [tag] },
+			},
+			limit: limit
 		})
 			.sort({ last_reviewed: 'asc' })
 			.exec();
@@ -128,7 +138,7 @@ export class DB {
 			selector: {
 				last_reviewed: { $gte: date.toISOString() }
 			},
-			sort: [{ last_reviewed: 'desc' }],
+			sort: [{ last_reviewed: 'asc' }],
 			limit: limit
 		}).exec();
 
@@ -139,11 +149,13 @@ export class DB {
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
+		console.log("Limit: ", limit)
+
 		const results = await this.notifications.notifications.find({
 			selector: {
 				last_reviewed: { $lte: date.toISOString() }
 			},
-			sort: [{ last_reviewed: 'desc' }],
+			sort: [{ last_reviewed: 'asc' }],
 			limit: limit
 		}).exec();
 
@@ -186,5 +198,14 @@ export class DB {
 
 		const removePromises = docs.map((doc: any) => doc.remove());
 		await Promise.all(removePromises);
+	}
+
+	async removeTagByTitle(title: string) {
+		const doc = await this.tags.tagv2.findOne({
+			selector: { title: title }
+		}).exec();
+
+		await doc.remove();
+		console.log("Removed TAG: ", title);
 	}
 }
