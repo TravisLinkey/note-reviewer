@@ -1,9 +1,9 @@
 {
 	"id": "note-reviewer",
 	"name": "Note Reviewer",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin to help knowledge retention by reviewing old notes.",
+	"description": "A plugin to help knowledge retention by reviewing and filtering notes.",
 	"author": "Travis Linkey",
 	"authorUrl": "https://github.com/TravisLinkey",
 	"fundingUrl": "https://obsidian.md/pricing",
