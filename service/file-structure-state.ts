@@ -240,18 +240,13 @@ export class FileStructureState {
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
 		const oldTags: string[] = [];
 		filesToRemove.forEach(async (fileTitle: string) => {
-			// TODO - get each notification to be removed
-			console.log('File title: ', fileTitle);
+			// get each notification to be removed
 			const notification = await this.db.getNotificationByLocation(fileTitle);
-
-			console.log("NOTE: ", notification);
 			oldTags.push(...notification.tags);
-			console.log("TAGS: ", oldTags);
 
 			oldTags.forEach(async (tag: string) => {
 				const notifications = await this.db.getNotificationByTag(tag);
-				console.log("FOUND NOTIFICATIONS: ", notifications)
-				if (notifications.length < 1) {
+				if (notifications.length == 1) {
 					await this.db.removeTagByTitle(tag);
 				}
 			})
