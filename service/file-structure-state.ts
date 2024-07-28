@@ -41,11 +41,10 @@ export class FileStructureState {
 
 			const title = filePath.split("/").pop();
 			const note = {
-				id: uuidv4(),
 				title,
 				location: filePath,
 				reviewed: false,
-				last_reviewed: new Date('2023-01-01').toISOString(),
+				last_reviewed: new Date().toISOString(),
 				tags
 			} as Note;
 			notes.push(note);
@@ -85,11 +84,10 @@ export class FileStructureState {
 
 			const title = filePath.split("/").pop();
 			const note = {
-				id: uuidv4(),
 				title,
 				location: filePath.replace(this.basePath, "").substring(1),
 				reviewed: false,
-				last_reviewed: new Date('2023-01-01').toISOString(),
+				last_reviewed: new Date().toISOString(),
 				tags
 			} as Note;
 			notes.push(note);
@@ -208,9 +206,6 @@ export class FileStructureState {
 
 		console.log(this.currentState);
 		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
-			await this.db.removeDatabase();
-			await this.db.createDatabases();
-
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 			this.writeStateFile(JSON.stringify(this.currentState));
@@ -230,7 +225,6 @@ export class FileStructureState {
 
 		console.log("ALL TAGS: ", array);
 		const allTags = array.map((tag: string) => ({
-			id: uuidv4(),
 			title: tag
 		}))
 

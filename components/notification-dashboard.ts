@@ -20,15 +20,20 @@ export class NotificationDashboardView extends ItemView {
 	private selectedTag: string;
 	private selectedTagLabel: HTMLSpanElement;
 
-	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB, plugin: NotificationDashboardPlugin) {
+	constructor(leaf: WorkspaceLeaf, db: DB, plugin: NotificationDashboardPlugin) {
 		super(leaf);
 		this.allTags = [];
 		this.db = db;
-		this.notes = notes;
+		this.notes = [];
 		this.notifications = [];
 		this.plugin = plugin
 		this.resultsLimit = 10;
 		this.selectedTag = "None";
+	}
+
+	async reloadData() {
+		this.notes = await this.db.getAllNotifications();
+		this.initUI();
 	}
 
 	getViewType(): string {

@@ -1,13 +1,9 @@
 
 export const notificationsSchema = {
-	version: 0,
-	primaryKey: 'id',
+	version: 1,
+	primaryKey: 'location',
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			maxLength: 100,
-		},
 		title: {
 			type: 'string',
 			maxLength: 45,

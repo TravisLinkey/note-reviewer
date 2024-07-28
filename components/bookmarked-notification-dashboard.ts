@@ -11,11 +11,17 @@ export class BookmarkedNotificationView extends ItemView {
 	private notes: Note[] = [];
 	private db: DB;
 
-	constructor(leaf: WorkspaceLeaf, notes: Note[], db: DB) {
+	constructor(leaf: WorkspaceLeaf, db: DB) {
 		super(leaf);
-		this.notes = notes;
+		this.notes = [];
 		this.notifications = []
 		this.db = db;
+	}
+
+	async reloadData() {
+		console.log("RELOADING DATA");
+		this.notes = await this.db.getBookmarkedNotifications();
+		await this.initUI();
 	}
 
 	getViewType(): string {

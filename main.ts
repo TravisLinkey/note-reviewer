@@ -24,7 +24,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 	private basePath: string;
 	private db: DB;
 	private fileStructure: FileStructureState;
-	private notifications: Note[];
 	private ribbonIconEl: HTMLElement;
 
 	async onload() {
@@ -32,18 +31,13 @@ export default class NotificationDashboardPlugin extends Plugin {
 		const obsidianRootDirectory = this.app.vault.adapter.basePath;
 		this.basePath = obsidianRootDirectory + "/.obsidian/plugins/note-reviewer";
 
-		this.ribbonIconEl = this.addRibbonIcon('bell', 'Open Notifications', async () => {
-			await this.activateView()
-		});
-		this.ribbonIconEl.classList.add('badge-container');
-
 		this.db = new DB();
 		await this.db.init();
 
 		// @ts-ignore
 		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
 
-		await this.reloadView();
+		await this.loadView();
 	}
 
 	async activateView() {
@@ -65,36 +59,43 @@ export default class NotificationDashboardPlugin extends Plugin {
 		}
 	}
 	async onFileRenamed() {
-		await this.reloadView();
+		// TODO - get the notification leaf, reload the data
+		const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
+		if (notificationLeaf) {
+			const view = notificationLeaf.view as NotificationDashboardView;
+
+			await this.fileStructure.init();
+			await view.reloadData();
+		}
+
+		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD).first();
+		if (bookmarkLeaf) {
+			// @ts-ignore
+			const view = bookmarkLeaf.view as BookmarkedNotificationView;
+			await this.fileStructure.init();
+			await view.reloadData();
+		}
 	}
 
-	async reloadView() {
+	async loadView() {
 		await this.fileStructure.init();
-
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)
-
-		// this.notifications = await this.db.getUnreviewedNotifications(0, 100);
-		this.notifications = await this.db.getAllNotifications();
-		this.notifications.map((note) => {
-			if (note.title.includes('Ideas')) {
-				// @ts-ignore
-				console.log(note.toJSON());
-			}
-		})
 
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.notifications, this.db, this)
+			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
 		)
 
-		const bookmarkedNotifications = await this.db.getBookmarkedNotifications();
 		this.registerView(
 			VIEW_TYPE_BOOKMARKED_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, bookmarkedNotifications, this.db)
+			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
 		)
 
-		// 	this.moveIconToBottom();
+		this.ribbonIconEl = this.addRibbonIcon('bell', 'Open Notifications', async () => {
+			await this.activateView()
+		});
+		this.ribbonIconEl.classList.add('badge-container');
 
+		// 	this.moveIconToBottom();
 		// 	// await this.updateBadge();
 
 		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
@@ -111,7 +112,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
 		console.log("Existing leaf: ", existingLeaf);
 		if (!existingLeaf) {
-
 			await this.app.workspace.getLeaf(true).setViewState({
 				type: VIEW_TYPE_BOOKMARKED_DASHBOARD,
 				active: true

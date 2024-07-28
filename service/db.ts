@@ -16,17 +16,17 @@ export class DB {
 	private tags: any;
 
 	async init() {
-	// 	await this.removeDatabase();
+	 	await this.removeDatabase();
 	 	await this.createDatabases();
 	}
 
 	async removeDatabase() {
-		// await removeRxDatabase('Notifications', getRxStorageDexie());
-		// await removeRxDatabase('Tags', getRxStorageDexie());
+		 // await removeRxDatabase('Notifications', getRxStorageDexie());
+		 // await removeRxDatabase('Tags', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(id: string) {
-		const doc = await this.notifications.notifications.findOne(id).exec();
+		const doc = await this.notifications.notificationsv2.findOne(id).exec();
 		if (doc) {
 			await doc.update({
 				$set: {
@@ -39,24 +39,24 @@ export class DB {
 	async createDatabases() {
 		try {
 			this.notifications = await createRxDatabase({
-				name: "Notifications",
+				name: "Notifications_v2",
 				storage: getRxStorageDexie(),
 				ignoreDuplicate: true
 			});
 			this.tags = await createRxDatabase({
-				name: "Tags",
+				name: "Tags_v3",
 				storage: getRxStorageDexie(),
 				ignoreDuplicate: false
 			});
 
 			await this.notifications.addCollections({
-				notifications: {
+				notificationsv2: {
 					schema: notificationsSchema
 				}
 			})
 
 			await this.tags.addCollections({
-				tagv2: {
+				tagv3: {
 					schema: tagsSchema
 				}
 			})
@@ -68,7 +68,7 @@ export class DB {
 	}
 
 	async getAllNotifications() {
-		const results = await this.notifications.notifications.find().exec();
+		const results = await this.notifications.notificationsv2.find().exec();
 		if (results) {
 			return results;
 		} else {
@@ -77,7 +77,7 @@ export class DB {
 	}
 
 	async getAllTags() {
-		const results = await this.tags.tagv2.find().exec();
+		const results = await this.tags.tagv3.find().exec();
 		if (results) {
 			return results;
 		} else {
@@ -86,7 +86,7 @@ export class DB {
 	}
 
 	async getBookmarkedNotifications() {
-		const results = await this.notifications.notifications.find({
+		const results = await this.notifications.notificationsv2.find({
 			selector: {
 				bookmarked: true
 			},
@@ -98,7 +98,7 @@ export class DB {
 
 
 	async getNotificationByLocation(location: string) {
-		const doc = await this.notifications.notifications.findOne({
+		const doc = await this.notifications.notificationsv2.findOne({
 			selector: {
 				location: location
 			}
@@ -108,7 +108,7 @@ export class DB {
 	}
 
 	async getNotificationByTag(tag: string, limit: number = 50) {
-		const doc = await this.notifications.notifications.find({
+		const doc = await this.notifications.notificationsv2.find({
 			selector: {
 				tags: { $in: [tag] },
 			},
@@ -121,7 +121,7 @@ export class DB {
 	}
 
 	async getNotificationByTitle(title: string) {
-		const doc = await this.notifications.notifications.findOne({
+		const doc = await this.notifications.notificationsv2.findOne({
 			selector: {
 				title: title
 			}
@@ -134,7 +134,7 @@ export class DB {
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
-		const results = await this.notifications.notifications.find({
+		const results = await this.notifications.notificationsv2.find({
 			selector: {
 				last_reviewed: { $gte: date.toISOString() }
 			},
@@ -151,7 +151,7 @@ export class DB {
 
 		console.log("Limit: ", limit)
 
-		const results = await this.notifications.notifications.find({
+		const results = await this.notifications.notificationsv2.find({
 			selector: {
 				last_reviewed: { $lte: date.toISOString() }
 			},
@@ -163,7 +163,7 @@ export class DB {
 	}
 
 	async patchNotification(id: string) {
-		const doc = await this.notifications.notifications.findOne(id).exec();
+		const doc = await this.notifications.notificationsv2.findOne(id).exec();
 		if (doc) {
 			await doc.update({
 				$set: {
@@ -174,15 +174,15 @@ export class DB {
 	}
 
 	async putBatchNotifications(records: Note[]) {
-		await this.notifications.notifications.bulkInsert(records);
+		await this.notifications.notificationsv2.bulkInsert(records);
 	}
 
 	async putBatchTags(tags: Tag[]) {
-		await this.tags.tagv2.bulkInsert(tags);
+		await this.tags.tagv3.bulkInsert(tags);
 	}
 
 	async putNotification(notification: Note) {
-		await this.notifications.notifications.insert({
+		await this.notifications.notificationsv2.insert({
 			title: notification.title,
 			location: notification.location,
 			bookmarked: false,
@@ -192,7 +192,7 @@ export class DB {
 	}
 
 	async removeNotificationsByTitle(location: string) {
-		const docs = await this.notifications.notifications.find({
+		const docs = await this.notifications.notificationsv2.find({
 			selector: { location }
 		}).exec();
 
@@ -201,7 +201,7 @@ export class DB {
 	}
 
 	async removeTagByTitle(title: string) {
-		const doc = await this.tags.tagv2.findOne({
+		const doc = await this.tags.tagv3.findOne({
 			selector: { title: title }
 		}).exec();
 

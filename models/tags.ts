@@ -1,12 +1,8 @@
 export const tagsSchema = {
-	version: 7,
-	primaryKey: 'id',
+	version: 8,
+	primaryKey: 'title',
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			maxLength: 100
-		},
 		title: {
 			type: 'string',
 			minLength: 1,
@@ -14,5 +10,5 @@ export const tagsSchema = {
 			unique: true,
 		},
 	},
-	required: ['id', 'title']
+	required: ['title']
 };
