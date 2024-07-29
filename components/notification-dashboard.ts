@@ -52,7 +52,6 @@ export class NotificationDashboardView extends ItemView {
 			this.allTags.push(t.title);
 		})
 
-		console.log('ALL TAGS: ', this.allTags.sort());
 		this.initUI();
 	}
 
@@ -146,15 +145,11 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async fetchMoreNotifications() {
-		console.log("Results Limit: ", this.resultsLimit);
-
 		if (this.selectedTag !== "Filter" && this.selectedTag !== "None") {
 			this.notes = await this.filterNotificationsByTag(this.selectedTag);
 		} else {
 			this.notes = await this.db.getUnreviewedNotifications(15, this.resultsLimit);
 		}
-
-		console.log("NOTES: ", this.notes);
 
 		this.initUI();
 	}
@@ -185,7 +180,6 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	showBookmarkedNotifications() {
-		console.log("SHOWING BOOKMARKS");
 		this.plugin.showBookmarkedNotifications();
 	}
 

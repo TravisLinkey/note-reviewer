@@ -149,8 +149,6 @@ export class DB {
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
-		console.log("Limit: ", limit)
-
 		const results = await this.notifications.notificationsv2.find({
 			selector: {
 				last_reviewed: { $lte: date.toISOString() }
@@ -164,7 +162,6 @@ export class DB {
 
 	async patchNotification(location: string) {
 		const doc = await this.notifications.notificationsv2.findOne(location).exec();
-		console.log("Patching notification: ", location, doc);
 		if (doc) {
 			await doc.update({
 				$set: {
@@ -207,6 +204,5 @@ export class DB {
 		}).exec();
 
 		await doc.remove();
-		console.log("Removed TAG: ", title);
 	}
 }

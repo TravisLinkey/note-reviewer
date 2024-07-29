@@ -99,7 +99,6 @@ export class NotificationComponent extends Component {
 	}
 
 	async bookmarkNote() {
-		console.log(`Bookmarking note: ${this.notification.title}`);
 		await this.db.bookmarkNotification(this.notification.title);
 	}
 

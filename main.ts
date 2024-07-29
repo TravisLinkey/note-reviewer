@@ -50,7 +50,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 	moveIconToBottom() {
 		const ribbonContainer = document.querySelector('.workspace-ribbon') as HTMLElement;
-		console.log("Moving icon to bottom.", ribbonContainer);
 
 		if (ribbonContainer) {
 			ribbonContainer.appendChild(this.ribbonIconEl);
@@ -108,7 +107,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 	async showBookmarkedNotifications() {
 		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
-		console.log("Existing leaf: ", existingLeaf);
 		if (!existingLeaf) {
 			await this.app.workspace.getLeaf(true).setViewState({
 				type: VIEW_TYPE_BOOKMARKED_DASHBOARD,

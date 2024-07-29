@@ -19,7 +19,6 @@ export class BookmarkedNotificationView extends ItemView {
 	}
 
 	async reloadData() {
-		console.log("RELOADING DATA");
 		this.notes = await this.db.getBookmarkedNotifications();
 		await this.initUI();
 	}

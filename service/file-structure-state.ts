@@ -32,11 +32,8 @@ export class FileStructureState {
 		const notes: Note[] = [];
 
 		added.forEach((filePath: string) => {
-			console.log("LOCATION: ", filePath);
 			const content = fs.readFileSync(this.basePath + "/" + filePath, 'utf-8');
 			const tags = this.extractTagsFromMarkdown(content);
-
-			console.log("LOCATION: ", filePath);
 
 			const title = filePath.split("/").pop();
 			const note = {
@@ -48,7 +45,6 @@ export class FileStructureState {
 			} as Note;
 			notes.push(note);
 		})
-		console.log("ALL notes", notes);
 		await this.db.putBatchNotifications(notes);
 	}
 
@@ -99,11 +95,7 @@ export class FileStructureState {
 		const oldState = this.getOldState();
 
 		if (JSON.stringify(oldState) !== JSON.stringify(this.currentState)) {
-			console.log("They are different");
-
 			const diff = this.getDifference(oldState);
-			console.log("Difference: ", diff);
-
 			await this.updateFilesInDatabase(diff);
 
 			// replace old state file
@@ -203,7 +195,6 @@ export class FileStructureState {
 	async init() {
 		this.currentState = this.buildFileStructure(this.basePath);
 
-		console.log(this.currentState);
 		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
 			fs.mkdirSync(this.storageFolder);
 			await this.initNotificationsDatabase();
@@ -223,7 +214,6 @@ export class FileStructureState {
 	async initTagsDatabase() {
 		const array = [...new Set(this.allTags)];
 
-		console.log("ALL TAGS: ", array);
 		const allTags = array.map((tag: string) => ({
 			title: tag
 		}))
