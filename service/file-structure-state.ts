@@ -23,7 +23,7 @@ export class FileStructureState {
 		this.allTags = new Set();
 		this.basePath = obsidianRootDir;
 		this.db = db;
-		this.storageFolder = pluginRootDir + '/storage/';
+		this.storageFolder = pluginRootDir + '/storage';
 		this.stateFile = pluginRootDir + "/storage/oldState.txt";
 	}
 
@@ -193,10 +193,13 @@ export class FileStructureState {
 	}
 
 	async init() {
+		if (!fs.existsSync(this.storageFolder)) {
+			fs.mkdirSync(this.storageFolder, {recursive: true});
+		}
+
 		this.currentState = this.buildFileStructure(this.basePath);
 
-		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
-			fs.mkdirSync(this.storageFolder);
+		if (!fs.existsSync(this.stateFile)) {
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 			this.writeStateFile(JSON.stringify(this.currentState));

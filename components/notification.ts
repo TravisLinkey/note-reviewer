@@ -39,26 +39,25 @@ export class NotificationComponent extends Component {
 		lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
 
 		// Buttons
-		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'notification-buttons-container' });
+		this.buttonsContainer = this.notificationEl.createEl('div');
 		const viewButton = this.createIconButton(viewIcon, 'View', this.openNote.bind(this));
 		const doneButton = this.createIconButton(createIcon, 'Done', () => this.markDone());
 		const bookmarkButton = this.createIconButton(bookmarkIcon, 'Bookmark', this.bookmarkNote.bind(this));
 		this.buttonsContainer.appendChild(viewButton);
 		this.buttonsContainer.appendChild(doneButton);
 		this.buttonsContainer.appendChild(bookmarkButton);
+		// Initially hide the buttons
+		this.buttonsContainer.addClass('notification-buttons-container-hidden');
 
 		// Add event listeners for highlighting
 		this.notificationEl.addEventListener('mouseenter', () => {
+			this.buttonsContainer.removeClass('notification-buttons-container-hidden');
 			this.notificationEl.classList.add('highlighted');
-			this.buttonsContainer.style.display = 'flex';
 		});
 		this.notificationEl.addEventListener('mouseleave', () => {
+			this.buttonsContainer.addClass('notification-buttons-container-hidden');
 			this.notificationEl.classList.remove('highlighted');
-			this.buttonsContainer.style.display = 'none';
 		});
-
-		// Initially hide the buttons
-		this.buttonsContainer.style.display = 'none';
 	}
 
 	createIconButton(pathData: string, ariaLabel: string, clickHandler: () => void): HTMLElement {

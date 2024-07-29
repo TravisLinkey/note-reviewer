@@ -39,7 +39,7 @@ export const dashboardStyle = `
     	    margin-right: 10px;
     	    flex: 1;
     	}
-    	.notification-buttons-container {
+    	.notification-buttons-container-hidden {
     	    display: none;
     	    flex-direction: row;
     	    gap: 5px;
@@ -48,3 +48,5 @@ export const dashboardStyle = `
     	    background-color: var(--background-modifier-hover);
     	}	
 		`;
+
+

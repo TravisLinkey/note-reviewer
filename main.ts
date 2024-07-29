@@ -27,7 +27,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 	async onload() {
 		// @ts-ignore
 		const obsidianRootDirectory = this.app.vault.adapter.basePath;
-		this.basePath = obsidianRootDirectory + "/.obsidian/plugins/note-reviewer";
+		this.basePath = this.app.vault.configDir + `/plugins/${this.manifest.id}`;
 
 		this.db = new DB();
 		await this.db.init();
