@@ -1,7 +1,6 @@
 import fs from "fs";
-import { DB } from "storage/db";
+import { DB } from "service/db";
 import { Note } from "main";
-import { v4 as uuidv4 } from 'uuid';
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -206,6 +205,7 @@ export class FileStructureState {
 
 		console.log(this.currentState);
 		if (!fs.existsSync(this.storageFolder) || !fs.existsSync(this.stateFile)) {
+			fs.mkdirSync(this.storageFolder);
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 			this.writeStateFile(JSON.stringify(this.currentState));

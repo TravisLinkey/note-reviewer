@@ -25,8 +25,8 @@ export class DB {
 		 // await removeRxDatabase('Tags', getRxStorageDexie());
 	}
 
-	async bookmarkNotification(id: string) {
-		const doc = await this.notifications.notificationsv2.findOne(id).exec();
+	async bookmarkNotification(title: string) {
+		const doc = await this.notifications.notificationsv2.findOne(title).exec();
 		if (doc) {
 			await doc.update({
 				$set: {
@@ -162,8 +162,9 @@ export class DB {
 		return results;
 	}
 
-	async patchNotification(id: string) {
-		const doc = await this.notifications.notificationsv2.findOne(id).exec();
+	async patchNotification(location: string) {
+		const doc = await this.notifications.notificationsv2.findOne(location).exec();
+		console.log("Patching notification: ", location, doc);
 		if (doc) {
 			await doc.update({
 				$set: {

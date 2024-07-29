@@ -1,7 +1,6 @@
-import NotificationDashboardPlugin from 'main';
+import NotificationDashboardPlugin, { Note } from 'main';
 import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import { Note } from 'controllers/notes';
 import { NotificationComponent } from './notification';
 import { Tag } from '../main';
 import { dashboardStyle } from '../constants';
@@ -166,17 +165,17 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async markAllDone() {
-		const allIds: string[] = [];
+		const allTitles: string[] = [];
 
 		try {
 			this.notifications.map((notification: NotificationComponent) => {
 				if (notification && notification.isChecked()) {
-					allIds.push(notification.notification.id);
+					allTitles.push(notification.notification.location);
 					notification.notificationEl.remove();
 				}
 			})
-			const updatePromises = allIds.map(async (id: string) => {
-				await this.db.patchNotification(id);
+			const updatePromises = allTitles.map(async (title: string) => {
+				await this.db.patchNotification(title);
 			});
 
 			await Promise.all(updatePromises);

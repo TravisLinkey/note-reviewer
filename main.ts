@@ -5,7 +5,6 @@ import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "com
 import { Plugin, WorkspaceLeaf } from "obsidian"
 
 export interface Note {
-	id: string;
 	title: string;
 	location: string;
 	reviewed: boolean;
@@ -16,7 +15,6 @@ export interface Note {
 }
 
 export interface Tag {
-	id: string;
 	title: string;
 }
 

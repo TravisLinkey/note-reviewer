@@ -1,6 +1,6 @@
 import { App, Component, TFile } from 'obsidian';
 import { DB } from 'service/db';
-import { Note } from 'controllers/notes';
+import { Note } from 'main';
 import { createIcon, bookmarkIcon, viewIcon } from '../constants/index';
 
 export class NotificationComponent extends Component {
@@ -94,13 +94,13 @@ export class NotificationComponent extends Component {
 	}
 
 	async markDone() {
-		await this.db.patchNotification(this.notification.id);
+		await this.db.patchNotification(this.notification.title);
 		this.notificationEl.remove();
 	}
 
 	async bookmarkNote() {
-		console.log(`Bookmarking note: ${this.notification.id}`);
-		await this.db.bookmarkNotification(this.notification.id);
+		console.log(`Bookmarking note: ${this.notification.title}`);
+		await this.db.bookmarkNotification(this.notification.title);
 	}
 
 	setCheckboxState(isChecked: boolean) {
