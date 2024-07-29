@@ -3,7 +3,7 @@
 	"name": "Note Reviewer",
 	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin to help knowledge retention by reviewing and filtering notes.",
+	"description": "Help knowledge retention by reviewing and filtering notes.",
 	"author": "Travis Linkey",
 	"authorUrl": "https://github.com/TravisLinkey",
 	"fundingUrl": "https://www.buymeacoffee.com/travislinkey",
