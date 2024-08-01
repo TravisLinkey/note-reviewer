@@ -1,6 +1,6 @@
-import fs from "fs";
 import { DB } from "service/db";
 import { Note } from "main";
+import { App, TFile, TFolder } from "obsidian";
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -12,6 +12,7 @@ interface FileStructureDiff {
 }
 
 export class FileStructureState {
+	private app: App;
 	private basePath: string;
 	private currentState: FileStructure;
 	private db: DB;
@@ -19,53 +20,62 @@ export class FileStructureState {
 	private storageFolder: string;
 	public allTags: Set<string>;
 
-	constructor(obsidianRootDir: string, pluginRootDir: string, db: DB) {
+	constructor(app: App, obsidianRootDir: string, pluginRootDir: string, db: DB) {
 		this.allTags = new Set();
+		this.app = app;
 		this.basePath = obsidianRootDir;
 		this.db = db;
-		this.storageFolder = pluginRootDir + '/storage';
 		this.stateFile = pluginRootDir + "/storage/oldState.txt";
+		this.storageFolder = pluginRootDir + '/storage';
 	}
 
 
 	async addNewFileToDatabase(added: string[]) {
 		const notes: Note[] = [];
 
-		added.forEach((filePath: string) => {
-			const content = fs.readFileSync(this.basePath + "/" + filePath, 'utf-8');
-			const tags = this.extractTagsFromMarkdown(content);
+		added.forEach(async (filePath: string) => {
+			// const content = fs.readFileSync(this.basePath + "/" + filePath, 'utf-8');
 
-			const title = filePath.split("/").pop();
-			const note = {
-				title,
-				location: filePath,
-				reviewed: false,
-				last_reviewed: new Date().toISOString(),
-				tags
-			} as Note;
-			notes.push(note);
+			const file = this.app.vault.getAbstractFileByPath(this.basePath + '/' + filePath);
+			if (file instanceof TFile) {
+				const content = await this.app.vault.read(file);
+
+				const tags = this.extractTagsFromMarkdown(content);
+
+				const title = filePath.split("/").pop();
+				const note = {
+					title,
+					location: filePath,
+					reviewed: false,
+					last_reviewed: new Date().toISOString(),
+					tags
+				} as Note;
+				notes.push(note);
+			}
 		})
 		await this.db.putBatchNotifications(notes);
 	}
 
 	/* A method to create the current file structure state file*/
-	buildFileStructure(dirPath: string): FileStructure {
+	async buildFileStructure(filePath: string): Promise<FileStructure> {
 		const result: FileStructure = {};
-		const directories = fs.readdirSync(dirPath);
 
-		directories.forEach((directory) => {
-			if (!directory.startsWith(".")) {
-				const path = dirPath + "/" + directory;
-				const stats = fs.statSync(path);
+		const folder = this.app.vault.getFolderByPath(filePath.replace('//', "/"));
+		if (!(folder instanceof TFolder)) {
+			throw new Error(`${filePath} is not a directory`);
+		}
 
-				if (stats.isDirectory()) {
-					result[directory] = this.buildFileStructure(path);
-				}
-				else {
-					result[directory] = null;
+		for (const file of folder.children) {
+			if (!file.name.startsWith(".")) {
+				const path = `${filePath}/${file.name}`;
+
+				if (file instanceof TFolder) {
+					result[file.name] = await this.buildFileStructure(path);
+				} else if (file instanceof TFile) {
+					result[file.name] = null;
 				}
 			}
-		})
+		}
 
 		return result;
 	}
@@ -73,19 +83,25 @@ export class FileStructureState {
 	createAllNotes(allNotes: string[]): Note[] {
 		const notes: Note[] = [];
 
-		allNotes.forEach((filePath: string) => {
-			const content = fs.readFileSync(filePath, 'utf-8');
-			const tags = this.extractTagsFromMarkdown(content);
+		allNotes.forEach(async (filePath: string) => {
 
-			const title = filePath.split("/").pop();
-			const note = {
-				title,
-				location: filePath.replace(this.basePath, "").substring(1),
-				reviewed: false,
-				last_reviewed: new Date().toISOString(),
-				tags
-			} as Note;
-			notes.push(note);
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (file instanceof TFile) {
+				const content = await this.app.vault.read(file);
+
+				// const content = fs.readFileSync(filePath, 'utf-8');
+				const tags = this.extractTagsFromMarkdown(content);
+
+				const title = filePath.split("/").pop();
+				const note = {
+					title,
+					location: filePath.replace(this.basePath, "").substring(1),
+					reviewed: false,
+					last_reviewed: new Date().toISOString(),
+					tags
+				} as Note;
+				notes.push(note);
+			}
 		})
 
 		return notes;
@@ -100,8 +116,6 @@ export class FileStructureState {
 
 			// replace old state file
 			this.writeStateFile(JSON.stringify(this.currentState));
-		} else {
-			console.log("They are the same");
 		}
 	}
 
@@ -127,24 +141,48 @@ export class FileStructureState {
 		return tags;
 	};
 
-	findMarkdownFiles(dir: string): string[] {
+	// 	findMarkdownFiles(dir: string): string[] {
+	// 		let results: string[] = [];
+	// 		const directories = fs.readdirSync(dir);
+	// 
+	// 		directories.forEach((directory) => {
+	// 			if (!directory.startsWith(".")) {
+	// 				const path = dir + "/" + directory;
+	// 				const stat = fs.statSync(path);
+	// 
+	// 				if (stat && stat.isDirectory()) {
+	// 					const res = this.findMarkdownFiles(path);
+	// 
+	// 					results = results.concat(res);
+	// 				} else if (path.endsWith('.md')) {
+	// 					results.push(path);
+	// 				}
+	// 			}
+	// 		})
+	// 
+	// 		return results;
+	// 	}
+
+	async findMarkdownFiles(dir: string): Promise<string[]> {
 		let results: string[] = [];
-		const directories = fs.readdirSync(dir);
+		const folder = this.app.vault.getFolderByPath(dir);
 
-		directories.forEach((directory) => {
-			if (!directory.startsWith(".")) {
-				const path = dir + "/" + directory;
-				const stat = fs.statSync(path);
+		if (!(folder instanceof TFolder)) {
+			throw new Error(`${dir} is not a directory`);
+		}
 
-				if (stat && stat.isDirectory()) {
-					const res = this.findMarkdownFiles(path);
+		for (const file of folder.children) {
+			if (!file.name.startsWith(".")) {
+				const path = `${dir}/${file.name}`;
 
+				if (file instanceof TFolder) {
+					const res = await this.findMarkdownFiles(path);
 					results = results.concat(res);
-				} else if (path.endsWith('.md')) {
+				} else if (file instanceof TFile && path.endsWith('.md')) {
 					results.push(path);
 				}
 			}
-		})
+		}
 
 		return results;
 	}
@@ -187,19 +225,45 @@ export class FileStructureState {
 	}
 
 	/* Read the old state file into memory */
-	getOldState(): FileStructure {
-		const fileContent = fs.readFileSync(this.stateFile, 'utf-8');
-		return JSON.parse(fileContent)
-	}
+	async getOldState(): FileStructure {
 
-	async init() {
-		if (!fs.existsSync(this.storageFolder)) {
-			fs.mkdirSync(this.storageFolder, {recursive: true});
+		// const fileContent = fs.readFileSync(this.stateFile, 'utf-8');
+		const file = this.app.vault.getAbstractFileByPath(this.stateFile);
+		if (file instanceof TFile) {
+			const fileContent = await this.app.vault.read(file);
+			return JSON.parse(fileContent)
 		}
 
-		this.currentState = this.buildFileStructure(this.basePath);
+		return {};
+	}
 
-		if (!fs.existsSync(this.stateFile)) {
+	// 	async init() {
+	// 		if (!fs.existsSync(this.storageFolder)) {
+	// 			fs.mkdirSync(this.storageFolder, { recursive: true });
+	// 		}
+	// 
+	// 		this.currentState = this.buildFileStructure(this.basePath);
+	// 
+	// 		if (!fs.existsSync(this.stateFile)) {
+	// 			await this.initNotificationsDatabase();
+	// 			await this.initTagsDatabase();
+	// 			this.writeStateFile(JSON.stringify(this.currentState));
+	// 		} else {
+	// 			this.detectStatefileUpdates();
+	// 		}
+	// 	}
+
+	async init() {
+		const storageFolder = this.app.vault.adapter.getResourcePath(this.storageFolder);
+
+		if (!storageFolder) {
+			await this.app.vault.createFolder(this.storageFolder);
+		}
+
+		this.currentState = await this.buildFileStructure(this.app.vault.getRoot().path);
+
+		const stateFile = this.app.vault.getAbstractFileByPath(this.stateFile);
+		if (!stateFile) {
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 			this.writeStateFile(JSON.stringify(this.currentState));
@@ -209,7 +273,7 @@ export class FileStructureState {
 	}
 
 	async initNotificationsDatabase() {
-		const allFiles = this.findMarkdownFiles(this.basePath);
+		const allFiles = await this.findMarkdownFiles(this.app.vault.getRoot().path);
 		const allNotes = this.createAllNotes(allFiles);
 		await this.db.putBatchNotifications(allNotes);
 	}
@@ -246,13 +310,16 @@ export class FileStructureState {
 	async updateFilesInDatabase(diff: FileStructureDiff) {
 		await this.addNewFileToDatabase(diff.added);
 		await this.removeOldFileFromDatabase(diff.removed);
-
-		// TODO - scan this file for tags
 	}
 
-	writeStateFile(state: string): void {
+	async writeStateFile(state: string): Promise<void> {
 		try {
-			fs.writeFileSync(this.stateFile, state);
+			const file = this.app.vault.getAbstractFileByPath(this.stateFile);
+			if (file instanceof TFile) {
+				await this.app.vault.modify(file, state);
+			} else {
+				await this.app.vault.create(this.stateFile, state);
+			}
 		} catch (error) {
 			console.log("Error: ", error);
 		}

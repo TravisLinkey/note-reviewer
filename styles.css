@@ -6,7 +6,6 @@
     position: absolute;
     top: 0;
     right: 0;
-    background-color: red;
     color: white;
     border-radius: 50%;
     padding: 2px 6px;
@@ -23,9 +22,112 @@
     cursor: pointer; /* Add this class to your stylesheet */
 }
 
-.notification {
-    /* Other styles */
+.notification-last-reviewed {
+	display: flex;
+	width: 50%;
+}
+
+ .notification-dashboard {
+ 	padding: 20px;
+ }
+
+ .flex-container {
+ 	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+ 	padding: 10px;
+ 	border-bottom: 1px solid #e1e4e8;
+ 	font-weight: bold;
+ }
+
+.left-side {
+	display: flex;
+	align-items: center;
+}
+
+.custom-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+ .flex-container .done-header-button.hidden {
+ 	display: none; /* Initially hide the done button */
+ }
+
+ .flex-container .done-header-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 75px;
+	flex-shrink: 0;
+ }
+
+ .notification {
+     display: flex;
+     justify-content: space-between;
+     padding: 10px;
+     border-bottom: 1px solid #e1e4e8;
+     transition: background-color 0.2s ease-in-out;
+     height: 40px; /* Set a fixed height */
+     align-items: center; 
+ }
+ .notification-checkbox {
+     margin-right: 10px;
+ }
+
+ .notification-title {
+     font-weight: bold;
+     margin-right: 10px;
+ }
+
+.notification-flex-container {
     cursor: default; /* Ensure the default cursor for the container */
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 5px 10px;
+}
+
+.column {
+	flex: 1;
+	display: flex;
+	align-items: center;
+}
+
+.notification-left-column {
+	white-space: nowrap
+}
+
+.notification-middle-column {
+	justify-content: center;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.notification-right-column {
+	justify-content: flex-end;
+    gap: 5px;
+}
+
+.notification-right-column.hidden {
+    display: none;
+    gap: 5px;
+}
+
+.notification-button-container {
+	display: flex;
+	align-content: center;
+}
+
+.highlighted {
+    background-color: var(--background-modifier-hover);
+}	
+
+.hidden {
+	display: none;
 }
 
 .bookmark-button {

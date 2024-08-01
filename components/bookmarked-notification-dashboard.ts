@@ -2,8 +2,6 @@ import { DB } from "service/db";
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { Note } from "main";
 import { NotificationComponent } from "./notification";
-import { dashboardStyle } from '../constants';
-
 export const VIEW_TYPE_BOOKMARKED_DASHBOARD = 'bookmarked-dashboard-view';
 
 export class BookmarkedNotificationView extends ItemView {
@@ -43,12 +41,6 @@ export class BookmarkedNotificationView extends ItemView {
 
 	async initUI() {
 		const { contentEl } = this;
-
-		// Add a style block for custom styles
-		const style = document.createElement('style');
-		style.textContent = dashboardStyle;
-
-		document.head.appendChild(style);
 
 		// Main container
 		const container = contentEl.createEl('div', { cls: 'bookmark-dashboard' });

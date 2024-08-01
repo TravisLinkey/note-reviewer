@@ -26,7 +26,11 @@ export class DB {
 	}
 
 	async bookmarkNotification(title: string) {
-		const doc = await this.notifications.notificationsv2.findOne(title).exec();
+		const doc = await this.notifications.notificationsv2.findOne({
+			selector: {
+				title: title
+			}
+		}).exec();
 		if (doc) {
 			await doc.update({
 				$set: {

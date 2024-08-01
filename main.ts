@@ -33,14 +33,12 @@ export default class NotificationDashboardPlugin extends Plugin {
 		await this.db.init();
 
 		// @ts-ignore
-		this.fileStructure = new FileStructureState(obsidianRootDirectory, this.basePath, this.db);
+		this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.basePath, this.db);
 
 		await this.loadView();
 	}
 
 	async activateView() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD);
-
 		await this.app.workspace.getLeaf(true).setViewState({
 			type: VIEW_TYPE_NOTIFICATION_DASHBOARD,
 			active: true
@@ -48,15 +46,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
-	moveIconToBottom() {
-		const ribbonContainer = document.querySelector('.workspace-ribbon') as HTMLElement;
-
-		if (ribbonContainer) {
-			ribbonContainer.appendChild(this.ribbonIconEl);
-		}
-	}
 	async onFileRenamed() {
-		// TODO - get the notification leaf, reload the data
 		const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 		if (notificationLeaf) {
 			const view = notificationLeaf.view as NotificationDashboardView;
@@ -91,9 +81,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 			await this.activateView()
 		});
 		this.ribbonIconEl.classList.add('badge-container');
-
-		// 	this.moveIconToBottom();
-		// 	// await this.updateBadge();
 
 		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
 		this.addCommand({

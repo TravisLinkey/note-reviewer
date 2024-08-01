@@ -3,7 +3,6 @@ import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { NotificationComponent } from './notification';
 import { Tag } from '../main';
-import { dashboardStyle } from '../constants';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
@@ -69,16 +68,9 @@ export class NotificationDashboardView extends ItemView {
 
 		const { contentEl } = this;
 
-		// Add a style block for custom styles
-		const style = document.createElement('style');
-		style.textContent = dashboardStyle;
-		document.head.appendChild(style);
-
 		// Main container
 		const container = contentEl.createEl('div', { cls: 'notification-container' });
-
 		const buttonContainer = container.createEl('div', { cls: 'button-container' });
-
 		const leftButtonGroup = buttonContainer.createEl('div', { cls: 'left-button-group' });
 
 		// "Fetch" button
@@ -118,21 +110,23 @@ export class NotificationDashboardView extends ItemView {
 		});
 
 		// "Bookmark" button
-		const bookmarkButton = buttonContainer.createEl('button', { text: 'Show Bookmarked', cls: 'bookmark-button' });
+		const bookmarkButton = buttonContainer.createEl('button', { text: 'Show Bookmarked', cls: 'custom-button' });
 		bookmarkButton.addEventListener('click', () => this.showBookmarkedNotifications());
 
 		// Header
-		const headerEl = container.createEl('div', { cls: 'notification-header' });
+		const headerEl = container.createEl('div', { cls: 'flex-container' });
+
+		const leftSide = headerEl.createEl('div', { cls: 'left-side' })
 
 		// Select All Checkbox
-		this.selectAllCheckboxEl = headerEl.createEl('input', { type: 'checkbox', cls: 'all-notification-checkbox' });
+		this.selectAllCheckboxEl = leftSide.createEl('input', { type: 'checkbox', cls: 'all-notification-checkbox' });
 		this.selectAllCheckboxEl.addEventListener('change', () => this.toggleSelectAll());
 
 		// Title Label
-		headerEl.createEl('div', { text: 'Select all', cls: 'notification-title' });
+		leftSide.createEl('div', { text: 'Select all', cls: 'title-label' });
 
 		// Done Button
-		const doneHeaderButton = headerEl.createEl('button', { text: 'Done', cls: 'notification-button done-header-button' });
+		const doneHeaderButton = headerEl.createEl('button', { text: 'Done', cls: 'done-header-button' });
 		doneHeaderButton.addEventListener('click', () => {
 			this.markAllDone();
 		});
@@ -201,10 +195,10 @@ export class NotificationDashboardView extends ItemView {
 		const checkboxes = this.contentEl.querySelectorAll('.notification-checkbox:checked');
 		const doneHeaderButton = this.contentEl.querySelector('.done-header-button');
 		if (doneHeaderButton) {
-			if (checkboxes.length > 0) {
-				doneHeaderButton.classList.add('visible');
+			if (checkboxes.length < 1) {
+				doneHeaderButton.classList.add('hidden');
 			} else {
-				doneHeaderButton.classList.remove('visible');
+				doneHeaderButton.classList.remove('hidden');
 			}
 		}
 	}

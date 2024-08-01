@@ -25,37 +25,37 @@ export class NotificationComponent extends Component {
 
 	render() {
 
-		const notificationEl = this.container.createEl('div', { cls: 'notification' });
+		const notificationEl = this.container.createEl('div', { cls: 'notification-flex-container' });
 		this.notificationEl = notificationEl;
 
-		this.checkboxEl = this.notificationEl.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-
-		// Title
-		const titleEl = this.notificationEl.createEl('div', { cls: 'notification-title', text: this.notification.title });
+		const leftColumn = this.notificationEl.createEl('div', { cls: 'column notification-left-column' });
+		this.checkboxEl = leftColumn.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
+		const titleEl = leftColumn.createEl('div', { cls: 'notification-title', text: this.notification.title });
 		titleEl.addEventListener('click', this.openNote.bind(this));
 
 		// Last Reviewed Label
-		const lastReviewedEl = notificationEl.createEl('div', { cls: 'notification-last-reviewed' });
+		const middleColumn = this.notificationEl.createEl('div', { cls: 'column notification-middle-column' });
+		const lastReviewedEl = middleColumn.createEl('div', { cls: 'notification-last-reviewed' });
 		lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
 
 		// Buttons
-		this.buttonsContainer = this.notificationEl.createEl('div');
+		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'column notification-right-column' });
+		const buttons = this.buttonsContainer.createEl("div", { cls: 'notification-button-container' })
 		const viewButton = this.createIconButton(viewIcon, 'View', this.openNote.bind(this));
 		const doneButton = this.createIconButton(createIcon, 'Done', () => this.markDone());
 		const bookmarkButton = this.createIconButton(bookmarkIcon, 'Bookmark', this.bookmarkNote.bind(this));
-		this.buttonsContainer.appendChild(viewButton);
-		this.buttonsContainer.appendChild(doneButton);
-		this.buttonsContainer.appendChild(bookmarkButton);
-		// Initially hide the buttons
-		this.buttonsContainer.addClass('notification-buttons-container-hidden');
+		buttons.appendChild(viewButton);
+		buttons.appendChild(doneButton);
+		buttons.appendChild(bookmarkButton);
+		buttons.classList.add('hidden');
 
 		// Add event listeners for highlighting
 		this.notificationEl.addEventListener('mouseenter', () => {
-			this.buttonsContainer.removeClass('notification-buttons-container-hidden');
+			buttons.classList.remove('hidden');
 			this.notificationEl.classList.add('highlighted');
 		});
 		this.notificationEl.addEventListener('mouseleave', () => {
-			this.buttonsContainer.addClass('notification-buttons-container-hidden');
+			buttons.classList.add('hidden');
 			this.notificationEl.classList.remove('highlighted');
 		});
 	}
