@@ -37,8 +37,6 @@ export class FileStructureState {
 		const notes = await Promise.all(added.map(async (filePath: string) => {
 
 			const file = this.app.vault.getAbstractFileByPath(filePath);
-			console.log("FILE: ", file);
-
 			if (file instanceof TFile) {
 				const content = await this.app.vault.cachedRead(file);
 				const tags = this.extractTagsFromMarkdown(content);
@@ -52,9 +50,7 @@ export class FileStructureState {
 			}
 		}));
 
-		console.log("Notes: ", notes);
 		if (notes.length > 0) {
-			console.log("DATABASE: ", this.db);
 			// @ts-ignore
 			await this.db.putBatchNotifications(notes);
 		}
@@ -91,9 +87,6 @@ export class FileStructureState {
 	async detectStatefileUpdates(): Promise<FileStructureDiff> {
 		const oldState = await this.getOldState();
 		const newState = this.app.vault.getFiles().map(file => file.path);
-
-		console.log('old state: ', oldState);
-		console.log('new state: ', newState);
 
 		const changes = {
 			added: [],
@@ -215,9 +208,7 @@ export class FileStructureState {
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
 		} catch (e) {
-			console.log("Detecting file updates");
 			const changes = await this.detectStatefileUpdates();
-			console.log("CHANGES: ", changes);
 			await this.updateFilesInDatabase(changes);
 		}
 	}
@@ -232,7 +223,6 @@ export class FileStructureState {
 		try {
 			await vault.createFolder(this.pluginDirPath + "/storage");
 		} catch (e) {
-			console.log("Storage already exists");
 			throw e;
 		}
 
@@ -303,9 +293,6 @@ export class FileStructureState {
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
 		const oldTags: string[] = [];
 		filesToRemove.forEach(async (file: string) => {
-
-			console.log("TO REMOVE: ", file);
-
 			// get each notification to be removed
 			const notification = await this.db.getNotificationByLocation(file);
 
@@ -333,7 +320,6 @@ export class FileStructureState {
 	async writeStateFile(state: string): Promise<void> {
 		try {
 			const file = this.app.vault.getAbstractFileByPath(this.stateFile);
-			console.log("State File: ", file);
 			if (file instanceof TFile) {
 				await this.app.vault.modify(file, state);
 			} else {
