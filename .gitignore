@@ -23,6 +23,6 @@ data.json
 
 .npmrc
 
-storage/oldState.txt
+storage/stateFile.csv
 dist
 release
