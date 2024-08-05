@@ -19,66 +19,47 @@ export class FileStructureState {
 	private stateFile: string;
 	private storageFolder: string;
 	public allTags: Set<string>;
+	private pluginDirPath: string;
 
-	constructor(app: App, obsidianRootDir: string, pluginRootDir: string, db: DB) {
+	constructor(app: App, obsidianRootDir: string, db: DB) {
 		this.allTags = new Set();
 		this.app = app;
 		this.basePath = obsidianRootDir;
 		this.db = db;
-		this.stateFile = pluginRootDir + "/storage/oldState.txt";
-		this.storageFolder = pluginRootDir + '/storage';
+
+		this.pluginDirPath = ".obsidian/plugins/note-reviewer";
+		this.stateFile = ".obsidian/plugins/note-reviewer/storage/stateFile.csv";
+		this.storageFolder = this.pluginDirPath + '/storage';
 	}
 
 
 	async addNewFileToDatabase(added: string[]) {
-		const notes: Note[] = [];
+		const notes = await Promise.all(added.map(async (filePath: string) => {
 
-		added.forEach(async (filePath: string) => {
-			// const content = fs.readFileSync(this.basePath + "/" + filePath, 'utf-8');
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			console.log("FILE: ", file);
 
-			const file = this.app.vault.getAbstractFileByPath(this.basePath + '/' + filePath);
 			if (file instanceof TFile) {
-				const content = await this.app.vault.read(file);
-
+				const content = await this.app.vault.cachedRead(file);
 				const tags = this.extractTagsFromMarkdown(content);
-
-				const title = filePath.split("/").pop();
-				const note = {
-					title,
-					location: filePath,
+				return {
+					title: file.name,
+					location: file.path,
 					reviewed: false,
 					last_reviewed: new Date().toISOString(),
 					tags
 				} as Note;
-				notes.push(note);
 			}
-		})
-		await this.db.putBatchNotifications(notes);
+		}));
+
+		console.log("Notes: ", notes);
+		if (notes.length > 0) {
+			console.log("DATABASE: ", this.db);
+			// @ts-ignore
+			await this.db.putBatchNotifications(notes);
+		}
 	}
 
-	/* A method to create the current file structure state file*/
-	async buildFileStructure(filePath: string): Promise<FileStructure> {
-		const result: FileStructure = {};
-
-		const folder = this.app.vault.getFolderByPath(filePath.replace('//', "/"));
-		if (!(folder instanceof TFolder)) {
-			throw new Error(`${filePath} is not a directory`);
-		}
-
-		for (const file of folder.children) {
-			if (!file.name.startsWith(".")) {
-				const path = `${filePath}/${file.name}`;
-
-				if (file instanceof TFolder) {
-					result[file.name] = await this.buildFileStructure(path);
-				} else if (file instanceof TFile) {
-					result[file.name] = null;
-				}
-			}
-		}
-
-		return result;
-	}
 
 	createAllNotes(allNotes: string[]): Note[] {
 		const notes: Note[] = [];
@@ -107,16 +88,35 @@ export class FileStructureState {
 		return notes;
 	}
 
-	async detectStatefileUpdates() {
-		const oldState = this.getOldState();
+	async detectStatefileUpdates(): Promise<FileStructureDiff> {
+		const oldState = await this.getOldState();
+		const newState = this.app.vault.getFiles().map(file => file.path);
 
-		if (JSON.stringify(oldState) !== JSON.stringify(this.currentState)) {
-			const diff = this.getDifference(oldState);
-			await this.updateFilesInDatabase(diff);
+		console.log('old state: ', oldState);
+		console.log('new state: ', newState);
 
-			// replace old state file
-			this.writeStateFile(JSON.stringify(this.currentState));
+		const changes = {
+			added: [],
+			removed: []
+		};
+
+		// Added rows
+		for (const path of newState) {
+			if (!oldState.includes(path)) {
+				// @ts-ignore
+				changes.added.push(path);
+			}
 		}
+
+		// Deleted rows
+		for (const path of oldState) {
+			if (!newState.includes(path)) {
+				// @ts-ignore
+				changes.removed.push(path);
+			}
+		}
+
+		return changes
 	}
 
 	extractTagsFromMarkdown = (content: string): string[] => {
@@ -140,28 +140,6 @@ export class FileStructureState {
 
 		return tags;
 	};
-
-	// 	findMarkdownFiles(dir: string): string[] {
-	// 		let results: string[] = [];
-	// 		const directories = fs.readdirSync(dir);
-	// 
-	// 		directories.forEach((directory) => {
-	// 			if (!directory.startsWith(".")) {
-	// 				const path = dir + "/" + directory;
-	// 				const stat = fs.statSync(path);
-	// 
-	// 				if (stat && stat.isDirectory()) {
-	// 					const res = this.findMarkdownFiles(path);
-	// 
-	// 					results = results.concat(res);
-	// 				} else if (path.endsWith('.md')) {
-	// 					results.push(path);
-	// 				}
-	// 			}
-	// 		})
-	// 
-	// 		return results;
-	// 	}
 
 	async findMarkdownFiles(dir: string): Promise<string[]> {
 		let results: string[] = [];
@@ -225,51 +203,85 @@ export class FileStructureState {
 	}
 
 	/* Read the old state file into memory */
-	async getOldState(): FileStructure {
-
-		// const fileContent = fs.readFileSync(this.stateFile, 'utf-8');
-		const file = this.app.vault.getAbstractFileByPath(this.stateFile);
-		if (file instanceof TFile) {
-			const fileContent = await this.app.vault.read(file);
-			return JSON.parse(fileContent)
-		}
-
-		return {};
+	async getOldState(): Promise<string[]> {
+		const oldCSVContent = await this.app.vault.adapter.read(this.stateFile);
+		return oldCSVContent.split('\n').map(line => line.replace(",", ""));
 	}
 
-	// 	async init() {
-	// 		if (!fs.existsSync(this.storageFolder)) {
-	// 			fs.mkdirSync(this.storageFolder, { recursive: true });
-	// 		}
-	// 
-	// 		this.currentState = this.buildFileStructure(this.basePath);
-	// 
-	// 		if (!fs.existsSync(this.stateFile)) {
-	// 			await this.initNotificationsDatabase();
-	// 			await this.initTagsDatabase();
-	// 			this.writeStateFile(JSON.stringify(this.currentState));
-	// 		} else {
-	// 			this.detectStatefileUpdates();
-	// 		}
-	// 	}
-
 	async init() {
-		const storageFolder = this.app.vault.adapter.getResourcePath(this.storageFolder);
 
-		if (!storageFolder) {
-			await this.app.vault.createFolder(this.storageFolder);
-		}
-
-		this.currentState = await this.buildFileStructure(this.app.vault.getRoot().path);
-
-		const stateFile = this.app.vault.getAbstractFileByPath(this.stateFile);
-		if (!stateFile) {
+		try {
+			await this.createStateFile();
 			await this.initNotificationsDatabase();
 			await this.initTagsDatabase();
-			this.writeStateFile(JSON.stringify(this.currentState));
-		} else {
-			this.detectStatefileUpdates();
+		} catch (e) {
+			console.log("Detecting file updates");
+			const changes = await this.detectStatefileUpdates();
+			console.log("CHANGES: ", changes);
+			await this.updateFilesInDatabase(changes);
 		}
+	}
+
+	async createStateFile(): Promise<void> {
+		const { vault } = this.app;
+
+		const files = vault.getFiles();
+
+		const filePaths = files.map(file => file.path + ",");
+
+		try {
+			await vault.createFolder(this.pluginDirPath + "/storage");
+		} catch (e) {
+			console.log("Storage already exists");
+			throw e;
+		}
+
+		await vault.create(this.pluginDirPath + "/storage/stateFile.csv", filePaths.join("\n"));
+	}
+
+	async detectChangesBetweenCSVFiles() {
+		const changes = {
+			added: [],
+			deleted: [],
+		};
+
+		const { vault } = this.app;
+
+		// @ts-ignore
+		const storageFolderPath = ".obsidian/plugins/note-reviewer/storage";
+
+		try {
+			const oldCSVContent = await vault.adapter.read(storageFolderPath + '/stateFile_OLD.csv');
+			const newCSVContent = await vault.adapter.read(storageFolderPath + '/stateFile_NEW.csv');
+
+			const oldState = this.parseCSV(oldCSVContent);
+			const newState = this.parseCSV(newCSVContent);
+
+			// Added rows
+			for (const path of newState) {
+				if (!oldState.includes(path)) {
+					// @ts-ignore
+					changes.added.push(path);
+				}
+			}
+
+			// Deleted rows
+			for (const path of oldState) {
+				if (!newState.includes(path)) {
+					// @ts-ignore
+					changes.deleted.push(path);
+				}
+			}
+
+			return changes;
+		} catch (e) {
+			console.log("Error reading csv files", e);
+		}
+
+	}
+
+	parseCSV(csvContent: string): string[] {
+		return csvContent.split('\n');
 	}
 
 	async initNotificationsDatabase() {
@@ -290,19 +302,25 @@ export class FileStructureState {
 
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
 		const oldTags: string[] = [];
-		filesToRemove.forEach(async (fileTitle: string) => {
+		filesToRemove.forEach(async (file: string) => {
+
+			console.log("TO REMOVE: ", file);
+
 			// get each notification to be removed
-			const notification = await this.db.getNotificationByLocation(fileTitle);
-			oldTags.push(...notification.tags);
+			const notification = await this.db.getNotificationByLocation(file);
 
-			oldTags.forEach(async (tag: string) => {
-				const notifications = await this.db.getNotificationByTag(tag);
-				if (notifications.length == 1) {
-					await this.db.removeTagByTitle(tag);
-				}
-			})
+			if (notification) {
+				oldTags.push(...notification.tags);
 
-			await this.db.removeNotificationsByTitle(fileTitle)
+				oldTags.forEach(async (tag: string) => {
+					const notifications = await this.db.getNotificationByTag(tag);
+					if (notifications.length == 1) {
+						await this.db.removeTagByTitle(tag);
+					}
+				})
+
+				await this.db.removeNotificationsByTitle(file)
+			}
 		})
 
 	}
@@ -315,9 +333,11 @@ export class FileStructureState {
 	async writeStateFile(state: string): Promise<void> {
 		try {
 			const file = this.app.vault.getAbstractFileByPath(this.stateFile);
+			console.log("State File: ", file);
 			if (file instanceof TFile) {
 				await this.app.vault.modify(file, state);
 			} else {
+
 				await this.app.vault.create(this.stateFile, state);
 			}
 		} catch (error) {

@@ -16,13 +16,13 @@ export class DB {
 	private tags: any;
 
 	async init() {
-	 	await this.removeDatabase();
-	 	await this.createDatabases();
+		await this.removeDatabase();
+		await this.createDatabases();
 	}
 
 	async removeDatabase() {
-		 // await removeRxDatabase('Notifications', getRxStorageDexie());
-		 // await removeRxDatabase('Tags', getRxStorageDexie());
+		// await removeRxDatabase('Notifications', getRxStorageDexie());
+		// await removeRxDatabase('Tags', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(title: string) {
@@ -108,7 +108,13 @@ export class DB {
 			}
 		}).exec();
 
-		return doc.toJSON();
+		try {
+
+			return doc.toJSON();
+		} catch (e) {
+			return null;
+		}
+
 	}
 
 	async getNotificationByTag(tag: string, limit: number = 50) {
