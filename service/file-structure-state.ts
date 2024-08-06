@@ -305,7 +305,6 @@ export class FileStructureState {
 						await this.db.removeTagByTitle(tag);
 					}
 				})
-
 				await this.db.removeNotificationsByTitle(file)
 			}
 		})
@@ -323,7 +322,6 @@ export class FileStructureState {
 			if (file instanceof TFile) {
 				await this.app.vault.modify(file, state);
 			} else {
-
 				await this.app.vault.create(this.stateFile, state);
 			}
 		} catch (error) {
