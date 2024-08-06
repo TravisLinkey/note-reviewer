@@ -31,6 +31,12 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.db = new DB();
 		await this.db.init();
 
+		// @ts-ignore
+		const obsidianRootDirectory = this.app.vault.adapter.basePath;
+
+		// @ts-ignore
+		this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
+
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
 			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
@@ -41,11 +47,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
 		)
 
-		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => {
+		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
 
-
-			await this.loadView();
-		});
+		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.loadView());
 	}
 
 	async activateView() {
@@ -63,37 +67,21 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
-	async onFileRenamed() {
-		const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
-		if (notificationLeaf) {
-			const view = notificationLeaf.view as NotificationDashboardView;
-
-			await this.fileStructure.init();
-			await view.reloadData();
-		}
-
-		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD).first();
+	async onRename() {
+		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
+		await this.fileStructure.init();
 		if (bookmarkLeaf) {
 			// @ts-ignore
 			const view = bookmarkLeaf.view as BookmarkedNotificationView;
-			await this.fileStructure.init();
 			await view.reloadData();
 		}
 	}
 
 	async loadView() {
-
-		// @ts-ignore
-		const obsidianRootDirectory = this.app.vault.adapter.basePath;
-
-		// @ts-ignore
-		this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
-
 		await this.fileStructure.init();
 
 		await this.activateView();
 
-		this.registerEvent(this.app.vault.on('rename', this.onFileRenamed.bind(this)))
 		this.addCommand({
 			id: 'open-notification-dashboard',
 			name: 'Open Notification Dashboard',

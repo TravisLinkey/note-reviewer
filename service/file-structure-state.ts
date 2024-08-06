@@ -202,7 +202,6 @@ export class FileStructureState {
 	}
 
 	async init() {
-
 		try {
 			await this.createStateFile();
 			await this.initNotificationsDatabase();
