@@ -37,6 +37,8 @@ export default class NotificationDashboardPlugin extends Plugin {
 		// @ts-ignore
 		this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
 
+		await this.fileStructure.init();
+
 		this.registerView(
 			VIEW_TYPE_NOTIFICATION_DASHBOARD,
 			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)

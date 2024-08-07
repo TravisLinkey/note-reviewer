@@ -1,6 +1,7 @@
 import { DB } from "service/db";
 import { Note } from "main";
 import { App, TFile, TFolder } from "obsidian";
+import { create } from "domain";
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -60,7 +61,7 @@ export class FileStructureState {
 	async createAllNotes(allNotes: TFile[]): Promise<Note[]> {
 		const notes: Note[] = [];
 
-		allNotes.map(async (file: TFile) => {
+		await Promise.all(allNotes.map(async (file: TFile) => {
 			if (file instanceof TFile) {
 
 				const content = await this.app.vault.cachedRead(file);
@@ -69,14 +70,14 @@ export class FileStructureState {
 
 				const note = {
 					title: file.name,
-					location: file.path, 
+					location: file.path,
 					reviewed: false,
 					last_reviewed: new Date().toISOString(),
 					tags
 				} as Note;
 				notes.push(note);
 			}
-		})
+		}))
 
 		return notes;
 	}
@@ -127,7 +128,6 @@ export class FileStructureState {
 		}
 
 		tags.forEach(tag => this.allTags.add(tag));
-
 		return tags;
 	};
 
@@ -199,16 +199,24 @@ export class FileStructureState {
 	}
 
 	async init() {
-		try {
-			await this.createStateFile();
-			await this.initNotificationsDatabase();
-			await this.initTagsDatabase();
-		} catch (e) {
+		const { vault } = this.app;
+
+		// if storage exists, check for changes
+		const stat = await vault.adapter.stat(this.pluginDirPath + "/storage");
+		if (stat) {
 			const changes = await this.detectStatefileUpdates();
+
 			if (changes.added.length > 0 || changes.removed.length > 0) {
 				await this.updateFilesInDatabase(changes);
 				await this.updateStateFile();
 			}
+
+		} else { 
+			// initialize everything 
+			await this.createStateFile();
+			await this.initNotificationsDatabase();
+			await this.initTagsDatabase();
+			await this.updateStateFile();
 		}
 	}
 
@@ -218,9 +226,9 @@ export class FileStructureState {
 		try {
 			await vault.createFolder(this.pluginDirPath + "/storage");
 		} catch (e) {
+			console.error("Error: ", e);
 			throw e;
 		}
-
 	}
 
 	async detectChangesBetweenCSVFiles() {
@@ -259,7 +267,7 @@ export class FileStructureState {
 
 			return changes;
 		} catch (e) {
-			console.log("Error reading csv files", e);
+			console.error("Error reading csv files", e);
 		}
 
 	}
@@ -267,6 +275,7 @@ export class FileStructureState {
 	async initNotificationsDatabase() {
 		const allFiles = this.app.vault.getMarkdownFiles();
 		const allNotes = await this.createAllNotes(allFiles);
+
 		await this.db.putBatchNotifications(allNotes);
 	}
 
@@ -286,7 +295,8 @@ export class FileStructureState {
 
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
 		const oldTags: string[] = [];
-		filesToRemove.forEach(async (file: string) => {
+
+		await Promise.all(filesToRemove.map(async (file: string) => {
 			const notification = await this.db.getNotificationByLocation(file);
 
 			if (notification) {
@@ -301,7 +311,7 @@ export class FileStructureState {
 
 				await this.db.removeNotificationsByTitle(file)
 			}
-		})
+		}));
 	}
 
 	async updateFilesInDatabase(diff: FileStructureDiff) {
@@ -314,7 +324,20 @@ export class FileStructureState {
 
 		const files = vault.getFiles();
 		const filePaths = files.map(file => file.path + ",");
-		await vault.create(this.pluginDirPath + "/storage/stateFile.csv", filePaths.join("\n"));
+
+		try {
+			const stateFilePath = this.pluginDirPath + "/storage/stateFile.csv";
+			const stateFile = await vault.adapter.stat(stateFilePath);
+
+			if (stateFile) {
+				await vault.adapter.remove(stateFilePath);
+			}
+
+			await vault.create(stateFilePath, filePaths.join("\n"));
+
+		} catch (e) {
+			console.error("Error creating state file: ", e);
+		}
 	}
 
 	async writeStateFile(state: string): Promise<void> {
@@ -326,7 +349,7 @@ export class FileStructureState {
 				await this.app.vault.create(this.stateFile, state);
 			}
 		} catch (error) {
-			console.log("Error: ", error);
+			console.error("Error: ", error);
 		}
 	}
 }

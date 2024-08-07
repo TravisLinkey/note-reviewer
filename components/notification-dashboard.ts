@@ -168,9 +168,7 @@ export class NotificationDashboardView extends ItemView {
 			});
 
 			await Promise.all(updatePromises);
-		} catch (error) {
-			console.log("Mark all done: ", error)
-		}
+		} catch (error) {}
 	}
 
 	showBookmarkedNotifications() {
@@ -187,7 +185,7 @@ export class NotificationDashboardView extends ItemView {
 				this.updateDoneButtonVisibility();
 			}
 		} catch (error) {
-			console.log("Toggle Select All: ", error);
+			console.error("Toggle Select All: ", error);
 		}
 	}
 

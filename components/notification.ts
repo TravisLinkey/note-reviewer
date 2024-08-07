@@ -108,8 +108,6 @@ export class NotificationComponent extends Component {
 	isChecked() {
 		try {
 			return this.checkboxEl.checked;
-		} catch (error) {
-			console.log("Is Checked: ", error)
-		}
+		} catch (error) {}
 	}
 }

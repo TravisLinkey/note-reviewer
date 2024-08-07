@@ -16,13 +16,13 @@ export class DB {
 	private tags: any;
 
 	async init() {
-		await this.removeDatabase();
+		// await this.removeDatabase();
 		await this.createDatabases();
 	}
 
 	async removeDatabase() {
-	// 	await removeRxDatabase('Notifications_v2', getRxStorageDexie());
-	// 	await removeRxDatabase('Tags_v3', getRxStorageDexie());
+		await removeRxDatabase('Notifications_v2', getRxStorageDexie());
+		await removeRxDatabase('Tags_v3', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(title: string) {
@@ -66,7 +66,7 @@ export class DB {
 			})
 
 		} catch (error) {
-			console.log("Error: ", error);
+			console.error("Error: ", error);
 		}
 
 	}
