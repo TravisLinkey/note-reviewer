@@ -57,22 +57,19 @@ export class FileStructureState {
 	}
 
 
-	createAllNotes(allNotes: string[]): Note[] {
+	async createAllNotes(allNotes: TFile[]): Promise<Note[]> {
 		const notes: Note[] = [];
 
-		allNotes.forEach(async (filePath: string) => {
-
-			const file = this.app.vault.getAbstractFileByPath(filePath);
+		allNotes.map(async (file: TFile) => {
 			if (file instanceof TFile) {
-				const content = await this.app.vault.read(file);
 
-				// const content = fs.readFileSync(filePath, 'utf-8');
+				const content = await this.app.vault.cachedRead(file);
+
 				const tags = this.extractTagsFromMarkdown(content);
 
-				const title = filePath.split("/").pop();
 				const note = {
-					title,
-					location: filePath.replace(this.basePath, "").substring(1),
+					title: file.name,
+					location: file.path, 
 					reviewed: false,
 					last_reviewed: new Date().toISOString(),
 					tags
@@ -208,16 +205,15 @@ export class FileStructureState {
 			await this.initTagsDatabase();
 		} catch (e) {
 			const changes = await this.detectStatefileUpdates();
-			await this.updateFilesInDatabase(changes);
+			if (changes.added.length > 0 || changes.removed.length > 0) {
+				await this.updateFilesInDatabase(changes);
+				await this.updateStateFile();
+			}
 		}
 	}
 
 	async createStateFile(): Promise<void> {
 		const { vault } = this.app;
-
-		const files = vault.getFiles();
-
-		const filePaths = files.map(file => file.path + ",");
 
 		try {
 			await vault.createFolder(this.pluginDirPath + "/storage");
@@ -225,7 +221,6 @@ export class FileStructureState {
 			throw e;
 		}
 
-		await vault.create(this.pluginDirPath + "/storage/stateFile.csv", filePaths.join("\n"));
 	}
 
 	async detectChangesBetweenCSVFiles() {
@@ -269,13 +264,9 @@ export class FileStructureState {
 
 	}
 
-	parseCSV(csvContent: string): string[] {
-		return csvContent.split('\n');
-	}
-
 	async initNotificationsDatabase() {
-		const allFiles = await this.findMarkdownFiles(this.app.vault.getRoot().path);
-		const allNotes = this.createAllNotes(allFiles);
+		const allFiles = this.app.vault.getMarkdownFiles();
+		const allNotes = await this.createAllNotes(allFiles);
 		await this.db.putBatchNotifications(allNotes);
 	}
 
@@ -289,10 +280,13 @@ export class FileStructureState {
 		await this.db.putBatchTags(allTags);
 	}
 
+	parseCSV(csvContent: string): string[] {
+		return csvContent.split('\n');
+	}
+
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
 		const oldTags: string[] = [];
 		filesToRemove.forEach(async (file: string) => {
-			// get each notification to be removed
 			const notification = await this.db.getNotificationByLocation(file);
 
 			if (notification) {
@@ -304,15 +298,23 @@ export class FileStructureState {
 						await this.db.removeTagByTitle(tag);
 					}
 				})
+
 				await this.db.removeNotificationsByTitle(file)
 			}
 		})
-
 	}
 
 	async updateFilesInDatabase(diff: FileStructureDiff) {
 		await this.addNewFileToDatabase(diff.added);
 		await this.removeOldFileFromDatabase(diff.removed);
+	}
+
+	async updateStateFile(): Promise<void> {
+		const { vault } = this.app;
+
+		const files = vault.getFiles();
+		const filePaths = files.map(file => file.path + ",");
+		await vault.create(this.pluginDirPath + "/storage/stateFile.csv", filePaths.join("\n"));
 	}
 
 	async writeStateFile(state: string): Promise<void> {

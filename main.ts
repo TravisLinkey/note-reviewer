@@ -48,6 +48,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 		)
 
 		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
+		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
 
 		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.loadView());
 	}
@@ -68,8 +69,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 	}
 
 	async onRename() {
-		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
+		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 		await this.fileStructure.init();
+
 		if (bookmarkLeaf) {
 			// @ts-ignore
 			const view = bookmarkLeaf.view as BookmarkedNotificationView;

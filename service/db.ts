@@ -21,8 +21,8 @@ export class DB {
 	}
 
 	async removeDatabase() {
-		// await removeRxDatabase('Notifications', getRxStorageDexie());
-		// await removeRxDatabase('Tags', getRxStorageDexie());
+	// 	await removeRxDatabase('Notifications_v2', getRxStorageDexie());
+	// 	await removeRxDatabase('Tags_v3', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(title: string) {
@@ -109,7 +109,6 @@ export class DB {
 		}).exec();
 
 		try {
-
 			return doc.toJSON();
 		} catch (e) {
 			return null;
