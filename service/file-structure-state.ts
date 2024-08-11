@@ -215,8 +215,12 @@ export class FileStructureState {
 			// initialize everything 
 			await this.createStateFile();
 			await this.initNotificationsDatabase();
-			await this.initTagsDatabase();
 			await this.updateStateFile();
+		}
+
+		const allNotifications = await this.db.getAllNotifications();
+		if (allNotifications.length < 1) {
+			await this.initNotificationsDatabase();
 		}
 	}
 
@@ -279,36 +283,15 @@ export class FileStructureState {
 		await this.db.putBatchNotifications(allNotes);
 	}
 
-	async initTagsDatabase() {
-		const array = [...new Set(this.allTags)];
-
-		const allTags = array.map((tag: string) => ({
-			title: tag
-		}))
-
-		await this.db.putBatchTags(allTags);
-	}
-
 	parseCSV(csvContent: string): string[] {
 		return csvContent.split('\n');
 	}
 
 	async removeOldFileFromDatabase(filesToRemove: string[]) {
-		const oldTags: string[] = [];
-
 		await Promise.all(filesToRemove.map(async (file: string) => {
 			const notification = await this.db.getNotificationByLocation(file);
 
 			if (notification) {
-				oldTags.push(...notification.tags);
-
-				oldTags.forEach(async (tag: string) => {
-					const notifications = await this.db.getNotificationByTag(tag);
-					if (notifications.length == 1) {
-						await this.db.removeTagByTitle(tag);
-					}
-				})
-
 				await this.db.removeNotificationsByTitle(file)
 			}
 		}));

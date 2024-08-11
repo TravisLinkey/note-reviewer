@@ -30,6 +30,7 @@ export class NotificationComponent extends Component {
 
 		const leftColumn = this.notificationEl.createEl('div', { cls: 'column notification-left-column' });
 		this.checkboxEl = leftColumn.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
+		const clippedTitle = this.notification.title.length < 20 ? this.notification.title : this.notification.title.slice(0, 20)
 		const titleEl = leftColumn.createEl('div', { cls: 'notification-title', text: this.notification.title });
 		titleEl.addEventListener('click', this.openNote.bind(this));
 

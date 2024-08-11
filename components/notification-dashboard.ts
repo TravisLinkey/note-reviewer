@@ -29,11 +29,6 @@ export class NotificationDashboardView extends ItemView {
 		this.selectedTag = "None";
 	}
 
-	async reloadData() {
-		this.notes = await this.db.getAllNotifications();
-		this.initUI();
-	}
-
 	getViewType(): string {
 		return VIEW_TYPE_NOTIFICATION_DASHBOARD;
 	}
@@ -43,15 +38,7 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async onOpen() {
-		const tags = await this.db.getAllTags();
-
-		tags.map((tag: Tag) => {
-			// @ts-ignore
-			const t = tag.toJSON();
-			this.allTags.push(t.title);
-		})
-
-		this.initUI();
+		await this.reloadData();
 	}
 
 	async onClose() {
@@ -168,7 +155,13 @@ export class NotificationDashboardView extends ItemView {
 			});
 
 			await Promise.all(updatePromises);
-		} catch (error) {}
+		} catch (error) { }
+	}
+
+	async reloadData() {
+		this.notes = await this.db.getAllNotifications();
+		this.allTags = await this.db.getAllTags();
+		this.initUI();
 	}
 
 	showBookmarkedNotifications() {

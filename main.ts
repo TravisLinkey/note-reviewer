@@ -2,7 +2,7 @@ import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "comp
 import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
-import { Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
 
 export interface Note {
 	title: string;
@@ -23,6 +23,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 	private db: DB;
 	private fileStructure: FileStructureState;
 	private pluginDirPath: string;
+	private notificationDashboard: NotificationDashboardView;
 
 	async onload() {
 		const pluginId = this.manifest.id; // Get the plugin ID
@@ -51,6 +52,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
 		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
+		this.registerEvent(this.app.vault.on('modify', this.onModify.bind(this)))
 
 		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.loadView());
 	}
@@ -70,17 +72,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
-	async onRename() {
-		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
-		await this.fileStructure.init();
-
-		if (bookmarkLeaf) {
-			// @ts-ignore
-			const view = bookmarkLeaf.view as BookmarkedNotificationView;
-			await view.reloadData();
-		}
-	}
-
 	async loadView() {
 		await this.fileStructure.init();
 
@@ -91,6 +82,41 @@ export default class NotificationDashboardPlugin extends Plugin {
 			name: 'Open Notification Dashboard',
 			callback: async () => await this.activateView()
 		})
+	}
+
+	async onModify(file: TFile) {
+		const { vault } = this.app;
+
+		const content = await vault.cachedRead(file);
+		const tags = this.fileStructure.extractTagsFromMarkdown(content);
+
+		try {
+			const note = {
+				title: file.name,
+				location: file.path,
+				reviewed: false,
+				last_reviewed: new Date().toISOString(),
+				tags
+			} as Note;
+
+			await this.db.upsertNotification(note);
+			await this.fileStructure.init();
+			await this.activateView();
+
+		} catch (e) {
+			console.log("Error: ", e)
+		}
+	}
+
+	async onRename() {
+		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
+		await this.fileStructure.init();
+
+		if (bookmarkLeaf) {
+			// @ts-ignore
+			const view = bookmarkLeaf.view as BookmarkedNotificationView;
+			await view.reloadData();
+		}
 	}
 
 	async showBookmarkedNotifications() {

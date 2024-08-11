@@ -3,7 +3,6 @@ import { RxDBUpdatePlugin } from 'rxdb/plugins/update';
 import { addRxPlugin, createRxDatabase, removeRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { notificationsSchema } from 'models/notifications';
-import { tagsSchema } from 'models/tags';
 import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 
@@ -22,7 +21,6 @@ export class DB {
 
 	async removeDatabase() {
 		await removeRxDatabase('Notifications_v2', getRxStorageDexie());
-		await removeRxDatabase('Tags_v3', getRxStorageDexie());
 	}
 
 	async bookmarkNotification(title: string) {
@@ -42,29 +40,21 @@ export class DB {
 
 	async createDatabases() {
 		try {
-			this.notifications = await createRxDatabase({
-				name: "Notifications_v2",
-				storage: getRxStorageDexie(),
-				ignoreDuplicate: true
-			});
-			this.tags = await createRxDatabase({
-				name: "Tags_v3",
-				storage: getRxStorageDexie(),
-				ignoreDuplicate: false
-			});
+			if (!this.notifications) {
+				this.notifications = await createRxDatabase({
+					name: "Notifications_v2",
+					storage: getRxStorageDexie(),
+					ignoreDuplicate: false
+				});
+			}
 
-			await this.notifications.addCollections({
-				notificationsv2: {
-					schema: notificationsSchema
-				}
-			})
-
-			await this.tags.addCollections({
-				tagv3: {
-					schema: tagsSchema
-				}
-			})
-
+			if (!this.notifications.notificationsv2) {
+				await this.notifications.addCollections({
+					notificationsv2: {
+						schema: notificationsSchema
+					}
+				})
+			}
 		} catch (error) {
 			console.error("Error: ", error);
 		}
@@ -80,13 +70,20 @@ export class DB {
 		}
 	}
 
-	async getAllTags() {
-		const results = await this.tags.tagv3.find().exec();
-		if (results) {
-			return results;
-		} else {
-			return null;
-		}
+	async getAllTags(): Promise<string[]> {
+		const results = await this.notifications.notificationsv2.find().exec();
+		const allTags = new Set();
+		results.forEach((notification: any) => {
+			const tags = notification.toJSON().tags;
+			if (tags.length > 0) {
+				tags.forEach((tag: string) => {
+					if (tag !== "") {
+						allTags.add(tag)
+					}
+				});
+			}
+		});
+		return [...allTags].sort() as string[];
 	}
 
 	async getBookmarkedNotifications() {
@@ -184,17 +181,14 @@ export class DB {
 		await this.notifications.notificationsv2.bulkInsert(records);
 	}
 
-	async putBatchTags(tags: Tag[]) {
-		await this.tags.tagv3.bulkInsert(tags);
-	}
-
 	async putNotification(notification: Note) {
 		await this.notifications.notificationsv2.insert({
 			title: notification.title,
 			location: notification.location,
 			bookmarked: false,
 			reviewed: false,
-			last_reviewed: notification.last_reviewed
+			last_reviewed: notification.last_reviewed,
+			tags: notification.tags
 		});
 	}
 
@@ -207,11 +201,14 @@ export class DB {
 		await Promise.all(removePromises);
 	}
 
-	async removeTagByTitle(title: string) {
-		const doc = await this.tags.tagv3.findOne({
-			selector: { title: title }
-		}).exec();
-
-		await doc.remove();
+	async upsertNotification(notification: Note) {
+		return this.notifications.notificationsv2.upsert({
+			title: notification.title,
+			location: notification.location,
+			bookmarked: false,
+			reviewed: false,
+			last_reviewed: notification.last_reviewed,
+			tags: notification.tags
+		});
 	}
 }
