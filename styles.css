@@ -24,26 +24,16 @@
 
 .notification-last-reviewed {
 	display: flex;
-	width: 50%;
 }
 
  .notification-dashboard {
  	padding: 20px;
  }
 
- .flex-container {
- 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	width: 100%;
+.bottom-border {
  	padding: 10px;
  	border-bottom: 1px solid #e1e4e8;
  	font-weight: bold;
- }
-
-.left-side {
-	display: flex;
-	align-items: center;
 }
 
 .custom-button {
@@ -98,7 +88,7 @@
 }
 
 .notification-left-column {
-	white-space: nowrap
+	white-space: nowrap;
 }
 
 .notification-middle-column {

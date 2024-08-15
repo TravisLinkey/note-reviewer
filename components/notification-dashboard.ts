@@ -2,7 +2,6 @@ import NotificationDashboardPlugin, { Note } from 'main';
 import { DB } from 'service/db';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { NotificationComponent } from './notification';
-import { Tag } from '../main';
 
 export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 
@@ -59,6 +58,8 @@ export class NotificationDashboardView extends ItemView {
 		const container = contentEl.createEl('div', { cls: 'notification-container' });
 		const buttonContainer = container.createEl('div', { cls: 'button-container' });
 		const leftButtonGroup = buttonContainer.createEl('div', { cls: 'left-button-group' });
+		// const centerLabel = container.createEl('div', { cls: 'last-reviewed' });
+		// centerLabel.createEl('span', { text: "Last Reviewed" });
 
 		// "Fetch" button
 		const fetchButton = leftButtonGroup.createEl('button', { text: 'Fetch', cls: 'fetch-button' });
@@ -101,19 +102,23 @@ export class NotificationDashboardView extends ItemView {
 		bookmarkButton.addEventListener('click', () => this.showBookmarkedNotifications());
 
 		// Header
-		const headerEl = container.createEl('div', { cls: 'flex-container' });
-
-		const leftSide = headerEl.createEl('div', { cls: 'left-side' })
+		const headerEl = container.createEl('div', { cls: 'notification-flex-container bottom-border' });
+		const leftColumn = headerEl.createEl('div', { cls: 'column notification-left-column' })
+		const middleColumn = headerEl.createEl('div', { cls: 'column notification-middle-column' })
+		const rightColumn = headerEl.createEl('div', { cls: 'column notification-right-column' })
 
 		// Select All Checkbox
-		this.selectAllCheckboxEl = leftSide.createEl('input', { type: 'checkbox', cls: 'all-notification-checkbox' });
+		this.selectAllCheckboxEl = leftColumn.createEl('input', { type: 'checkbox', cls: 'all-notification-checkbox' });
 		this.selectAllCheckboxEl.addEventListener('change', () => this.toggleSelectAll());
 
 		// Title Label
-		leftSide.createEl('div', { text: 'Select all', cls: 'title-label' });
+		leftColumn.createEl('div', { text: 'Select all', cls: 'title-label' });
+
+		// Last Reviewed
+		middleColumn.createEl('div', { text: 'Last reviewed' })
 
 		// Done Button
-		const doneHeaderButton = headerEl.createEl('button', { text: 'Done', cls: 'done-header-button' });
+		const doneHeaderButton = rightColumn.createEl('button', { text: 'Done', cls: 'done-header-button' });
 		doneHeaderButton.addEventListener('click', () => {
 			this.markAllDone();
 		});

@@ -29,18 +29,20 @@ export class NotificationComponent extends Component {
 		this.notificationEl = notificationEl;
 
 		const leftColumn = this.notificationEl.createEl('div', { cls: 'column notification-left-column' });
+		const middleColumn = this.notificationEl.createEl('div', { cls: 'column notification-middle-column' });
+		const rightColumn = this.notificationEl.createEl('div', { cls: 'column notification-right-column' });
+
 		this.checkboxEl = leftColumn.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
-		const clippedTitle = this.notification.title.length < 20 ? this.notification.title : this.notification.title.slice(0, 20)
-		const titleEl = leftColumn.createEl('div', { cls: 'notification-title', text: this.notification.title });
+		const clippedTitle = this.notification.title.length < 30 ? this.notification.title : this.notification.title.slice(0, 27) + "...";
+		const titleEl = leftColumn.createEl('div', { cls: 'notification-title', text: clippedTitle });
 		titleEl.addEventListener('click', this.openNote.bind(this));
 
 		// Last Reviewed Label
-		const middleColumn = this.notificationEl.createEl('div', { cls: 'column notification-middle-column' });
 		const lastReviewedEl = middleColumn.createEl('div', { cls: 'notification-last-reviewed' });
-		lastReviewedEl.textContent = `Last Reviewed: ${this.notification.last_reviewed}`;
+		lastReviewedEl.textContent = `${new Date(this.notification.last_reviewed).toLocaleDateString()}`;
 
 		// Buttons
-		this.buttonsContainer = this.notificationEl.createEl('div', { cls: 'column notification-right-column' });
+		this.buttonsContainer = rightColumn.createEl('div', { cls: 'column notification-right-column' });
 		const buttons = this.buttonsContainer.createEl("div", { cls: 'notification-button-container' })
 		const viewButton = this.createIconButton(viewIcon, 'View', this.openNote.bind(this));
 		const doneButton = this.createIconButton(createIcon, 'Done', () => this.markDone());
