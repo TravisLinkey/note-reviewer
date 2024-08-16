@@ -1,7 +1,6 @@
+import { App, TFile, TFolder } from "obsidian";
 import { DB } from "service/db";
 import { Note } from "main";
-import { App, TFile, TFolder } from "obsidian";
-import { create } from "domain";
 
 interface FileStructure {
 	[key: string]: FileStructure | null;
@@ -18,7 +17,6 @@ export class FileStructureState {
 	private currentState: FileStructure;
 	private db: DB;
 	private stateFile: string;
-	private storageFolder: string;
 	public allTags: Set<string>;
 	private pluginDirPath: string;
 
@@ -30,7 +28,6 @@ export class FileStructureState {
 
 		this.pluginDirPath = ".obsidian/plugins/note-reviewer";
 		this.stateFile = ".obsidian/plugins/note-reviewer/storage/stateFile.csv";
-		this.storageFolder = this.pluginDirPath + '/storage';
 	}
 
 
@@ -84,7 +81,9 @@ export class FileStructureState {
 
 	async detectStatefileUpdates(): Promise<FileStructureDiff> {
 		const oldState = await this.getOldState();
-		const newState = this.app.vault.getFiles().map(file => file.path);
+		const allFiles = this.app.vault.getFiles();
+
+		const newState = allFiles.map(file => file.path);
 
 		const changes = {
 			added: [],
@@ -203,6 +202,7 @@ export class FileStructureState {
 
 		// if storage exists, check for changes
 		const stat = await vault.adapter.stat(this.pluginDirPath + "/storage");
+
 		if (stat) {
 			const changes = await this.detectStatefileUpdates();
 
@@ -211,17 +211,18 @@ export class FileStructureState {
 				await this.updateStateFile();
 			}
 
-		} else { 
+			const allNotifications = await this.db.getAllNotifications();
+			if (allNotifications.length < 1) {
+				await this.initNotificationsDatabase();
+			}
+
+		} else {
 			// initialize everything 
 			await this.createStateFile();
 			await this.initNotificationsDatabase();
 			await this.updateStateFile();
 		}
 
-		const allNotifications = await this.db.getAllNotifications();
-		if (allNotifications.length < 1) {
-			await this.initNotificationsDatabase();
-		}
 	}
 
 	async createStateFile(): Promise<void> {
@@ -292,7 +293,7 @@ export class FileStructureState {
 			const notification = await this.db.getNotificationByLocation(file);
 
 			if (notification) {
-				await this.db.removeNotificationsByTitle(file)
+				await this.db.removeNotificationByLocation(file)
 			}
 		}));
 	}

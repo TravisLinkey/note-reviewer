@@ -96,7 +96,7 @@ export class NotificationComponent extends Component {
 	}
 
 	async markDone() {
-		await this.db.patchNotification(this.notification.title);
+		await this.db.patchNotification(this.notification.location);
 		this.notificationEl.remove();
 	}
 

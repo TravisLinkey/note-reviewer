@@ -12,7 +12,6 @@ addRxPlugin(RxDBUpdatePlugin);
 
 export class DB {
 	private notifications: any;
-	private tags: any;
 
 	async init() {
 		// await this.removeDatabase();
@@ -44,7 +43,7 @@ export class DB {
 				this.notifications = await createRxDatabase({
 					name: "Notifications_v2",
 					storage: getRxStorageDexie(),
-					ignoreDuplicate: false
+					ignoreDuplicate: true
 				});
 			}
 
@@ -168,6 +167,8 @@ export class DB {
 
 	async patchNotification(location: string) {
 		const doc = await this.notifications.notificationsv2.findOne(location).exec();
+		console.log("DOC: ", doc);
+
 		if (doc) {
 			await doc.update({
 				$set: {
@@ -192,7 +193,7 @@ export class DB {
 		});
 	}
 
-	async removeNotificationsByTitle(location: string) {
+	async removeNotificationByLocation(location: string) {
 		const docs = await this.notifications.notificationsv2.find({
 			selector: { location }
 		}).exec();

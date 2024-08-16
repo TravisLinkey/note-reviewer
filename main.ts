@@ -35,20 +35,23 @@ export default class NotificationDashboardPlugin extends Plugin {
 		// @ts-ignore
 		const obsidianRootDirectory = this.app.vault.adapter.basePath;
 
-		// @ts-ignore
-		this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
+		this.app.workspace.onLayoutReady(async () => {
+			// @ts-ignore
+			this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
 
-		await this.fileStructure.init();
+			await this.fileStructure.init();
 
-		this.registerView(
-			VIEW_TYPE_NOTIFICATION_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
-		)
+			this.registerView(
+				VIEW_TYPE_NOTIFICATION_DASHBOARD,
+				(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
+			)
 
-		this.registerView(
-			VIEW_TYPE_BOOKMARKED_DASHBOARD,
-			(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
-		)
+			this.registerView(
+				VIEW_TYPE_BOOKMARKED_DASHBOARD,
+				(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
+			)
+
+		})
 
 		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
 		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
