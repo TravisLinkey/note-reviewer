@@ -32,12 +32,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.db = new DB();
 		await this.db.init();
 
-		// @ts-ignore
-		const obsidianRootDirectory = this.app.vault.adapter.basePath;
-
 		this.app.workspace.onLayoutReady(async () => {
 			// @ts-ignore
-			this.fileStructure = new FileStructureState(this.app, obsidianRootDirectory, this.db);
+			this.fileStructure = new FileStructureState(this.app, this.app.vault.adapter.basePath, this.db);
 
 			await this.fileStructure.init();
 
@@ -50,21 +47,26 @@ export default class NotificationDashboardPlugin extends Plugin {
 				VIEW_TYPE_BOOKMARKED_DASHBOARD,
 				(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
 			)
-
 		})
 
 		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
 		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
 		this.registerEvent(this.app.vault.on('modify', this.onModify.bind(this)))
 
-		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.loadView());
+		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.activateView());
+
+		this.addCommand({
+			id: 'open-notification-dashboard',
+			name: 'Open Notification Dashboard',
+			callback: async () => await this.activateView()
+		})
 	}
 
 	async activateView() {
 		const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 		if (notificationLeaf) {
 			const view = notificationLeaf.view as NotificationDashboardView;
-			await view.reloadData();
+			await view.loadPage();
 			return;
 		}
 
@@ -73,18 +75,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 			active: true
 		});
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
-	}
-
-	async loadView() {
-		await this.fileStructure.init();
-
-		await this.activateView();
-
-		this.addCommand({
-			id: 'open-notification-dashboard',
-			name: 'Open Notification Dashboard',
-			callback: async () => await this.activateView()
-		})
 	}
 
 	async onModify(file: TFile) {
@@ -104,8 +94,15 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 			await this.db.upsertNotification(note);
 			await this.fileStructure.init();
-			await this.activateView();
 
+			const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
+			if (notificationLeaf) {
+				console.log("YES LEAF");
+				const view = notificationLeaf.view as NotificationDashboardView;
+				await view.loadDropdown();
+			} else {
+				console.log("NO LEAF");
+			}
 		} catch (e) {
 			console.log("Error: ", e)
 		}

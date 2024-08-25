@@ -8,6 +8,7 @@ export const VIEW_TYPE_NOTIFICATION_DASHBOARD = 'notification-dashboard-view';
 export class NotificationDashboardView extends ItemView {
 	private allTags: string[];
 	private db: DB;
+	private dropdownContainer: HTMLDivElement;
 	private dropdownMenu: HTMLSelectElement;
 	private notes: Note[] = [];
 	private notifications: NotificationComponent[];
@@ -37,7 +38,7 @@ export class NotificationDashboardView extends ItemView {
 	}
 
 	async onOpen() {
-		await this.reloadData();
+		await this.loadPage();
 	}
 
 	async onClose() {
@@ -66,7 +67,7 @@ export class NotificationDashboardView extends ItemView {
 		fetchButton.addEventListener('click', () => this.fetchMoreNotifications());
 
 		// Create a container for the dropdown button and menu
-		const dropdownContainer = leftButtonGroup.createEl('div', { cls: 'dropdown-container' });
+		this.dropdownContainer = leftButtonGroup.createEl('div', { cls: 'dropdown-container' });
 
 		const resultsLimitDropdown = leftButtonGroup.createEl('select', { cls: 'button-margin' });
 		const limits = [5, 10, 15, 20, 50, 100];
@@ -80,11 +81,11 @@ export class NotificationDashboardView extends ItemView {
 			this.resultsLimit = parseInt((event.target as HTMLSelectElement).value, 10);
 		})
 
-		// Create "Tags" dropdown button
-		this.dropdownMenu = dropdownContainer.createEl('select', { text: this.selectedTag, cls: 'button-margin' });
-
 		// Create a label for the selected tag
 		this.selectedTagLabel = leftButtonGroup.createEl('span', { text: `Selected Tag: ${this.selectedTag}`, cls: 'selected-tag-label' });
+
+		// Create "Tags" dropdown button
+		this.dropdownMenu = this.dropdownContainer.createEl('select', { text: this.selectedTag, cls: 'button-margin' });
 
 		// Populate dropdown menu with tags
 		this.allTags.forEach((tag: string, index: number) => {
@@ -145,6 +146,21 @@ export class NotificationDashboardView extends ItemView {
 		return this.db.getNotificationByTag(tag, this.resultsLimit);
 	}
 
+	reloadDropdown() {
+		this.dropdownMenu.innerHTML = "";
+
+		// Populate dropdown menu with tags
+		this.allTags.forEach((tag: string, index: number) => {
+			if (index == 0) {
+				this.dropdownMenu.createEl('option', { text: `Filter` });
+			}
+			this.dropdownMenu.createEl('option', { text: tag });
+		});
+		this.dropdownMenu.addEventListener('change', (event) => {
+			this.selectedTag = (event.target as HTMLSelectElement).value;
+		});
+	}
+
 	async markAllDone() {
 		const allTitles: string[] = [];
 
@@ -163,10 +179,19 @@ export class NotificationDashboardView extends ItemView {
 		} catch (error) { }
 	}
 
-	async reloadData() {
+	async loadPage() {
 		this.notes = await this.db.getAllNotifications();
 		this.allTags = await this.db.getAllTags();
+
+		// TODO - only do this when the app loads
 		this.initUI();
+	}
+
+	async loadDropdown() {
+		this.notes = await this.db.getAllNotifications();
+		this.allTags = await this.db.getAllTags();
+
+		 this.reloadDropdown();
 	}
 
 	showBookmarkedNotifications() {

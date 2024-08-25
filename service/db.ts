@@ -167,8 +167,6 @@ export class DB {
 
 	async patchNotification(location: string) {
 		const doc = await this.notifications.notificationsv2.findOne(location).exec();
-		console.log("DOC: ", doc);
-
 		if (doc) {
 			await doc.update({
 				$set: {
