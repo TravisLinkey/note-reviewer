@@ -1,7 +1,7 @@
 {
 	"id": "note-reviewer",
 	"name": "Note Reviewer",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"minAppVersion": "1.6.7",
 	"description": "Help knowledge retention by reviewing and filtering notes.",
 	"author": "Travis Linkey",

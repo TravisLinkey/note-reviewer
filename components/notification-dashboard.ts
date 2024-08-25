@@ -183,7 +183,6 @@ export class NotificationDashboardView extends ItemView {
 		this.notes = await this.db.getAllNotifications();
 		this.allTags = await this.db.getAllTags();
 
-		// TODO - only do this when the app loads
 		this.initUI();
 	}
 
