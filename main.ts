@@ -111,8 +111,8 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 		if (bookmarkLeaf) {
 			// @ts-ignore
-			const view = bookmarkLeaf.view as BookmarkedNotificationView;
-			await view.reloadData();
+			const view = bookmarkLeaf.view as NotificationDashboardView;
+			await view.loadPage();
 		}
 	}
 
