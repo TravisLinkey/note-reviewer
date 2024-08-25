@@ -97,11 +97,8 @@ export default class NotificationDashboardPlugin extends Plugin {
 
 			const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 			if (notificationLeaf) {
-				console.log("YES LEAF");
 				const view = notificationLeaf.view as NotificationDashboardView;
 				await view.loadDropdown();
-			} else {
-				console.log("NO LEAF");
 			}
 		} catch (e) {
 			console.log("Error: ", e)
