@@ -2,7 +2,7 @@ import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "comp
 import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
-import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import { Plugin, TFile, WorkspaceLeaf, Notice } from "obsidian"
 
 export interface Note {
 	title: string;
@@ -30,13 +30,25 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.pluginDirPath = `.obsidian/plugins/${pluginId}`;
 
 		this.db = new DB();
-		await this.db.init();
+		
+		try {
+			await this.db.init();
+		} catch (error) {
+			console.error("Failed to initialize database:", error);
+			// Show a notification to the user
+			new Notice("Note Reviewer: Failed to initialize database. Some features may not work properly.");
+			return; // Exit early if database initialization fails
+		}
 
 		this.app.workspace.onLayoutReady(async () => {
 			// @ts-ignore
 			this.fileStructure = new FileStructureState(this.app, this.app.vault.adapter.basePath, this.db);
 
-			await this.fileStructure.init();
+			try {
+				await this.fileStructure.init();
+			} catch (error) {
+				console.error("Failed to initialize file structure:", error);
+			}
 
 			this.registerView(
 				VIEW_TYPE_NOTIFICATION_DASHBOARD,

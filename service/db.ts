@@ -5,24 +5,62 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { notificationsSchema } from 'models/notifications';
 import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
+import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
 addRxPlugin(RxDBQueryBuilderPlugin);
 addRxPlugin(RxDBMigrationSchemaPlugin);
 addRxPlugin(RxDBUpdatePlugin);
+addRxPlugin(RxDBDevModePlugin);
 
 export class DB {
 	private notifications: any;
 
 	async init() {
-		// await this.removeDatabase();
+		// Check for existing databases first
+		await this.listExistingDatabases();
+		
+		// Remove any existing databases to start fresh and avoid migration issues
+		await this.removeDatabase();
 		await this.createDatabases();
 	}
 
+	// Add a method to check database status
+	isInitialized(): boolean {
+		return !!(this.notifications && this.notifications.notificationsv2);
+	}
+
+	// Add a method to list existing databases for debugging
+	async listExistingDatabases() {
+		try {
+			// This is a simple way to check if databases exist
+			console.log("Checking for existing databases...");
+			// Note: This is a basic check - in a real scenario you might want to use
+			// the storage adapter's methods to list databases
+		} catch (error) {
+			console.log("Error checking existing databases:", error);
+		}
+	}
+
 	async removeDatabase() {
-		await removeRxDatabase('Notifications_v2', getRxStorageDexie());
+		try {
+			await removeRxDatabase('notifications_v2', getRxStorageDexie());
+		} catch (error) {
+			console.log("Could not remove notifications_v2 database:", error);
+		}
+		
+		try {
+			await removeRxDatabase('notifications_v3', getRxStorageDexie());
+		} catch (error) {
+			console.log("Could not remove notifications_v3 database:", error);
+		}
 	}
 
 	async bookmarkNotification(title: string) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		const doc = await this.notifications.notificationsv2.findOne({
 			selector: {
 				title: title
@@ -39,37 +77,81 @@ export class DB {
 
 	async createDatabases() {
 		try {
+			console.log("Starting database creation...");
 			if (!this.notifications) {
+				console.log("Creating new database with name: notifications_v2");
 				this.notifications = await createRxDatabase({
-					name: "Notifications_v2",
+					name: "notifications_v2",
 					storage: getRxStorageDexie(),
-					ignoreDuplicate: true
+					ignoreDuplicate: true,
+					multiInstance: false,
+					allowSlowCount: true
 				});
+				console.log("Database created successfully");
 			}
 
 			if (!this.notifications.notificationsv2) {
+				console.log("Adding collection: notificationsv2");
 				await this.notifications.addCollections({
 					notificationsv2: {
-						schema: notificationsSchema
+						schema: notificationsSchema,
+						migrationStrategies: {
+							1: (oldDoc: any) => oldDoc // identity migration for v1
+						}
 					}
 				})
+				console.log("Collection added successfully");
 			}
 		} catch (error) {
-			console.error("Error: ", error);
-		}
+			console.error("Database creation error with notifications_v2: ", error);
+			
+			// Try with a different database name as fallback
+			try {
+				console.log("Attempting to create database with fallback name...");
+				this.notifications = await createRxDatabase({
+					name: "notifications_v3",
+					storage: getRxStorageDexie(),
+					ignoreDuplicate: true,
+					multiInstance: false,
+					allowSlowCount: true
+				});
 
+				if (!this.notifications.notificationsv2) {
+					await this.notifications.addCollections({
+						notificationsv2: {
+							schema: notificationsSchema
+						}
+					})
+				}
+				console.log("Database created successfully with fallback name");
+			} catch (fallbackError) {
+				console.error("Fallback database creation also failed: ", fallbackError);
+				throw fallbackError;
+			}
+		}
 	}
 
 	async getAllNotifications() {
+		// Check if database is initialized
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const results = await this.notifications.notificationsv2.find().exec();
 		if (results) {
 			return results;
 		} else {
-			return null;
+			return [];
 		}
 	}
 
 	async getAllTags(): Promise<string[]> {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const results = await this.notifications.notificationsv2.find().exec();
 		const allTags = new Set();
 		results.forEach((notification: any) => {
@@ -86,6 +168,11 @@ export class DB {
 	}
 
 	async getBookmarkedNotifications() {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const results = await this.notifications.notificationsv2.find({
 			selector: {
 				bookmarked: true
@@ -98,6 +185,11 @@ export class DB {
 
 
 	async getNotificationByLocation(location: string) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return null;
+		}
+		
 		const doc = await this.notifications.notificationsv2.findOne({
 			selector: {
 				location: location
@@ -113,6 +205,11 @@ export class DB {
 	}
 
 	async getNotificationByTag(tag: string, limit: number = 50) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const doc = await this.notifications.notificationsv2.find({
 			selector: {
 				tags: { $in: [tag] },
@@ -126,6 +223,11 @@ export class DB {
 	}
 
 	async getNotificationByTitle(title: string) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return null;
+		}
+		
 		const doc = await this.notifications.notificationsv2.findOne({
 			selector: {
 				title: title
@@ -136,6 +238,11 @@ export class DB {
 	}
 
 	async getRecentlyReviewed(days: number = 15, limit: number = 10) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
@@ -151,6 +258,11 @@ export class DB {
 	}
 
 	async getUnreviewedNotifications(days: number = 15, limit: number = 10) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return [];
+		}
+		
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
@@ -166,6 +278,11 @@ export class DB {
 	}
 
 	async patchNotification(location: string) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		const doc = await this.notifications.notificationsv2.findOne(location).exec();
 		if (doc) {
 			await doc.update({
@@ -177,10 +294,20 @@ export class DB {
 	}
 
 	async putBatchNotifications(records: Note[]) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		await this.notifications.notificationsv2.bulkInsert(records);
 	}
 
 	async putNotification(notification: Note) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		await this.notifications.notificationsv2.insert({
 			title: notification.title,
 			location: notification.location,
@@ -192,6 +319,11 @@ export class DB {
 	}
 
 	async removeNotificationByLocation(location: string) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		const docs = await this.notifications.notificationsv2.find({
 			selector: { location }
 		}).exec();
@@ -201,6 +333,11 @@ export class DB {
 	}
 
 	async upsertNotification(notification: Note) {
+		if (!this.notifications || !this.notifications.notificationsv2) {
+			console.error("Database not initialized");
+			return;
+		}
+		
 		return this.notifications.notificationsv2.upsert({
 			title: notification.title,
 			location: notification.location,
