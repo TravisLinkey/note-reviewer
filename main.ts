@@ -79,22 +79,14 @@ export default class NotificationDashboardPlugin extends Plugin {
 		);
 		*/
 		
-		console.log("DEBUG: Plugin loaded successfully");
-		
 		// Test database access
 		try {
-			const notifications = await this.db.getAllNotifications();
-			console.log("DEBUG: Plugin load - Database contains", notifications.length, "notifications");
-			
-			if (notifications.length > 0) {
-				console.log("DEBUG: Plugin load - First notification:", notifications[0]);
-			}
+			await this.db.getAllNotifications();
 		} catch (error) {
 			console.error("DEBUG: Plugin load - Error accessing database:", error);
 		}
 		
 		this.isInitialized = true;
-		console.log("DEBUG: Plugin initialization complete");
 	}
 
 	async activateView() {
@@ -112,17 +104,12 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
-	/*
 	async onModify(file: TFile) {
 		try {
 			const { vault } = this.app;
 
-			console.log("DEBUG: onModify - File modified:", file.name);
-			
 			const content = await vault.cachedRead(file);
 			const tags = this.fileStructure.extractTagsFromMarkdown(content);
-			
-			console.log("DEBUG: onModify - Extracted tags for", file.name + ":", tags);
 
 			const note = {
 				title: file.name,
@@ -143,9 +130,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 			console.log("Error: ", e)
 		}
 	}
-	*/
 
-	/*
 	async onRename() {
 		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 		await this.fileStructure.init();
@@ -156,7 +141,6 @@ export default class NotificationDashboardPlugin extends Plugin {
 			await view.loadPage();
 		}
 	}
-	*/
 
 	async showBookmarkedNotifications() {
 		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
@@ -170,11 +154,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 		}
 	}
 
-	/*
 	async onDelete(file: TFile) {
-		// Handle file deletion
-		console.log("DEBUG: onDelete - File deleted:", file.name);
 		await this.db.removeNotificationByLocation(file.path);
 	}
-	*/
 }

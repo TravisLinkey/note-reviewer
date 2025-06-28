@@ -213,23 +213,18 @@ export class NotificationDashboardView extends ItemView {
 			});
 
 			await Promise.all(updatePromises);
-		} catch (error) { }
+		} catch (error) {
+			console.error("Error marking all done:", error);
+		}
 	}
 
 	async loadPage() {
-		console.log("DEBUG: loadPage - Starting to load dashboard");
-		
 		try {
 			this.notes = await this.db.getAllNotifications();
-			console.log("DEBUG: loadPage - Loaded", this.notes.length, "notes from database");
-			
 			this.allTags = await this.db.getAllTags();
-			console.log("DEBUG: loadPage - Loaded", this.allTags.length, "tags from database");
-			
 			this.initUI();
-			console.log("DEBUG: loadPage - Dashboard UI initialized");
 		} catch (error) {
-			console.error("DEBUG: loadPage - Error loading dashboard:", error);
+			console.error("Error loading dashboard:", error);
 		}
 	}
 
