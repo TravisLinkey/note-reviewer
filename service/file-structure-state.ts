@@ -110,12 +110,71 @@ export class FileStructureState {
 	}
 
 	extractTagsFromMarkdown = (content: string): string[] => {
-		const lines = content.split('\n').slice(0, 10);
+		const lines = content.split('\n');
+		const tags: string[] = [];
+
+		// First, try to extract tags from YAML frontmatter
+		const yamlTags = this.extractTagsFromYamlFrontmatter(content);
+		if (yamlTags.length > 0) {
+			yamlTags.forEach(tag => this.allTags.add(tag));
+			return yamlTags;
+		}
+
+		// Fallback to the old format for backward compatibility
+		const oldFormatTags = this.extractTagsFromOldFormat(lines);
+		oldFormatTags.forEach(tag => this.allTags.add(tag));
+		return oldFormatTags;
+	};
+
+	extractTagsFromYamlFrontmatter = (content: string): string[] => {
+		const tags: string[] = [];
+		
+		// Match YAML frontmatter between --- markers
+		const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+		if (!frontmatterMatch) {
+			return tags;
+		}
+
+		const frontmatter = frontmatterMatch[1];
+		
+		// Look for tag: [] format
+		const tagArrayMatch = frontmatter.match(/^tag:\s*\[(.*?)\]/m);
+		if (tagArrayMatch) {
+			const tagString = tagArrayMatch[1];
+			// Split by comma and clean up each tag
+			const tagArray = tagString.split(',').map(tag => tag.trim().replace(/['"]/g, ''));
+			tags.push(...tagArray.filter(tag => tag.length > 0));
+			return tags;
+		}
+
+		// Look for tag: - format (YAML list)
+		const tagListMatches = frontmatter.match(/^tag:\s*((?:\s*-\s*[^\n]+\n?)+)/m);
+		if (tagListMatches) {
+			const tagList = tagListMatches[1];
+			// Extract each tag from the list
+			const tagMatches = tagList.match(/^\s*-\s*(.+)$/gm);
+			if (tagMatches) {
+				tagMatches.forEach(match => {
+					const tag = match.replace(/^\s*-\s*/, '').trim().replace(/['"]/g, '');
+					if (tag.length > 0) {
+						tags.push(tag);
+					}
+				});
+			}
+		}
+
+		return tags;
+	};
+
+	extractTagsFromOldFormat = (lines: string[]): string[] => {
+		const tags: string[] = [];
 		const tagPattern = /Tags:\s*((\[\[.*?\]\]\s*\|?\s*)+)/;
 		const tagExtractPattern = /\[\[(.*?)\]\]/g;
-		const tags = [];
 
-		for (const line of lines) {
+		// Only check first 10 lines for backward compatibility
+		const linesToCheck = lines.slice(0, 10);
+
+		for (const line of linesToCheck) {
 			const match = line.match(tagPattern);
 			if (match) {
 				let tagMatch;
@@ -126,7 +185,6 @@ export class FileStructureState {
 			}
 		}
 
-		tags.forEach(tag => this.allTags.add(tag));
 		return tags;
 	};
 

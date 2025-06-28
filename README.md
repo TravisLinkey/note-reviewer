@@ -10,11 +10,36 @@ When you have finished reviewing your note, select the done checkbox on that not
 
 ### Tags
 
-If you want your note to be grouped and filterable by a particular `Tag` you must include the following snippet somewhere in the top **10 lines** of your note.
+The plugin supports two tag formats for grouping and filtering your notes:
+
+#### New Format (Recommended): YAML Frontmatter
+Add tags to your note's YAML frontmatter header:
+
+```yaml
+---
+tag: [tag1, tag2, tag3]
+---
+```
+
+Or using YAML list format:
+```yaml
+---
+tag:
+  - tag1
+  - tag2
+  - tag3
+---
+```
+
+#### Legacy Format (Still Supported)
+For backward compatibility, you can still use the old format in the first **10 lines** of your note:
 
 ```
 Tags: [[Tag 1]] | [[Tag 2]]
 ```
 
-This will automatically be detected by the plugin and allow searching your note via the `Filter` dropdown from the Notification Dashboard.
+### Tag Detection
+- **YAML frontmatter** is checked first and takes priority
+- **Legacy format** is used as a fallback if no YAML frontmatter is found
+- Tags are automatically detected and available in the `Filter` dropdown from the Notification Dashboard
 

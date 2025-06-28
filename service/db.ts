@@ -1,213 +1,193 @@
-import { Note, Tag } from 'main';
-import { RxDBUpdatePlugin } from 'rxdb/plugins/update';
+// This file is commented out as it contains the old RxDB implementation
+// The new SQLite implementation is in service/db.ts
+
+/*
 import { addRxPlugin, createRxDatabase, removeRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
+import { Note, Tag } from 'main';
 import { notificationsSchema } from 'models/notifications';
-import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
-import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 
-addRxPlugin(RxDBQueryBuilderPlugin);
-addRxPlugin(RxDBMigrationSchemaPlugin);
-addRxPlugin(RxDBUpdatePlugin);
+addRxPlugin(getRxStorageDexie());
 
 export class DB {
-	private notifications: any;
+	private db: any;
 
 	async init() {
-		// await this.removeDatabase();
 		await this.createDatabases();
 	}
 
 	async removeDatabase() {
-		await removeRxDatabase('Notifications_v2', getRxStorageDexie());
-	}
-
-	async bookmarkNotification(title: string) {
-		const doc = await this.notifications.notificationsv2.findOne({
-			selector: {
-				title: title
-			}
-		}).exec();
-		if (doc) {
-			await doc.update({
-				$set: {
-					bookmarked: !doc.bookmarked
-				}
-			});
+		if (this.db) {
+			await removeRxDatabase('notifications', 'dexie');
 		}
 	}
 
 	async createDatabases() {
 		try {
-			if (!this.notifications) {
-				this.notifications = await createRxDatabase({
-					name: "Notifications_v2",
-					storage: getRxStorageDexie(),
-					ignoreDuplicate: true
-				});
-			}
-
-			if (!this.notifications.notificationsv2) {
-				await this.notifications.addCollections({
-					notificationsv2: {
-						schema: notificationsSchema
-					}
-				})
-			}
+			this.db = await createRxDatabase({
+				name: 'notifications',
+				storage: getRxStorageDexie(),
+				schema: {
+					notifications: notificationsSchema
+				}
+			});
 		} catch (error) {
-			console.error("Error: ", error);
+			console.error("Error creating database: ", error);
+			throw error;
 		}
+	}
 
+	async bookmarkNotification(title: string) {
+		const notification = await this.db.notifications.findOne({
+			selector: {
+				title
+			}
+		}).exec();
+
+		if (notification) {
+			await notification.patch({
+				bookmarked: !notification.bookmarked
+			});
+		}
 	}
 
 	async getAllNotifications() {
-		const results = await this.notifications.notificationsv2.find().exec();
-		if (results) {
-			return results;
-		} else {
-			return null;
-		}
+		const notifications = await this.db.notifications.find().exec();
+		return notifications.map((notification: any) => notification.toJSON());
 	}
 
 	async getAllTags(): Promise<string[]> {
-		const results = await this.notifications.notificationsv2.find().exec();
-		const allTags = new Set();
-		results.forEach((notification: any) => {
-			const tags = notification.toJSON().tags;
-			if (tags.length > 0) {
+		const notifications = await this.db.notifications.find().exec();
+		const allTags = new Set<string>();
+
+		notifications.forEach((notification: any) => {
+			const tags = notification.tags;
+			if (tags && Array.isArray(tags)) {
 				tags.forEach((tag: string) => {
-					if (tag !== "") {
-						allTags.add(tag)
+					if (tag && tag !== "") {
+						allTags.add(tag);
 					}
 				});
 			}
 		});
-		return [...allTags].sort() as string[];
+
+		return [...allTags].sort();
 	}
 
 	async getBookmarkedNotifications() {
-		const results = await this.notifications.notificationsv2.find({
+		const notifications = await this.db.notifications.find({
 			selector: {
 				bookmarked: true
-			},
-			sort: [{ last_reviewed: 'asc' }],
-		}).exec();
-
-		return results;
-	}
-
-
-	async getNotificationByLocation(location: string) {
-		const doc = await this.notifications.notificationsv2.findOne({
-			selector: {
-				location: location
 			}
 		}).exec();
+		return notifications.map((notification: any) => notification.toJSON());
+	}
 
-		try {
-			return doc.toJSON();
-		} catch (e) {
-			return null;
-		}
-
+	async getNotificationByLocation(location: string) {
+		const notification = await this.db.notifications.findOne({
+			selector: {
+				location
+			}
+		}).exec();
+		return notification ? notification.toJSON() : null;
 	}
 
 	async getNotificationByTag(tag: string, limit: number = 50) {
-		const doc = await this.notifications.notificationsv2.find({
+		const notifications = await this.db.notifications.find({
 			selector: {
-				tags: { $in: [tag] },
-			},
-			limit: limit
-		})
-			.sort({ last_reviewed: 'asc' })
-			.exec();
-
-		return doc;
+				tags: {
+					$elemMatch: {
+						$eq: tag
+					}
+				}
+			}
+		}).limit(limit).exec();
+		return notifications.map((notification: any) => notification.toJSON());
 	}
 
 	async getNotificationByTitle(title: string) {
-		const doc = await this.notifications.notificationsv2.findOne({
+		const notification = await this.db.notifications.findOne({
 			selector: {
-				title: title
+				title
 			}
 		}).exec();
-
-		return doc.toJSON();
+		return notification ? notification.toJSON() : null;
 	}
 
 	async getRecentlyReviewed(days: number = 15, limit: number = 10) {
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
-		const results = await this.notifications.notificationsv2.find({
+		const notifications = await this.db.notifications.find({
 			selector: {
-				last_reviewed: { $gte: date.toISOString() }
-			},
-			sort: [{ last_reviewed: 'asc' }],
-			limit: limit
-		}).exec();
-
-		return results;
+				last_reviewed: {
+					$gte: date.toISOString()
+				}
+			}
+		}).limit(limit).exec();
+		return notifications.map((notification: any) => notification.toJSON());
 	}
 
 	async getUnreviewedNotifications(days: number = 15, limit: number = 10) {
 		const date = new Date();
 		date.setDate(date.getDate() - days);
 
-		const results = await this.notifications.notificationsv2.find({
+		const notifications = await this.db.notifications.find({
 			selector: {
-				last_reviewed: { $lte: date.toISOString() }
-			},
-			sort: [{ last_reviewed: 'asc' }],
-			limit: limit
-		}).exec();
-
-		return results;
+				last_reviewed: {
+					$lte: date.toISOString()
+				}
+			}
+		}).limit(limit).exec();
+		return notifications.map((notification: any) => notification.toJSON());
 	}
 
 	async patchNotification(location: string) {
-		const doc = await this.notifications.notificationsv2.findOne(location).exec();
-		if (doc) {
-			await doc.update({
-				$set: {
-					last_reviewed: new Date().toISOString()
-				}
+		const notification = await this.db.notifications.findOne({
+			selector: {
+				location
+			}
+		}).exec();
+
+		if (notification) {
+			await notification.patch({
+				last_reviewed: new Date().toISOString()
 			});
 		}
 	}
 
 	async putBatchNotifications(records: Note[]) {
-		await this.notifications.notificationsv2.bulkInsert(records);
+		await this.db.notifications.bulkInsert(records);
 	}
 
 	async putNotification(notification: Note) {
-		await this.notifications.notificationsv2.insert({
-			title: notification.title,
-			location: notification.location,
-			bookmarked: false,
-			reviewed: false,
-			last_reviewed: notification.last_reviewed,
-			tags: notification.tags
-		});
+		await this.db.notifications.insert(notification);
 	}
 
 	async removeNotificationByLocation(location: string) {
-		const docs = await this.notifications.notificationsv2.find({
-			selector: { location }
+		const notification = await this.db.notifications.findOne({
+			selector: {
+				location
+			}
 		}).exec();
 
-		const removePromises = docs.map((doc: any) => doc.remove());
-		await Promise.all(removePromises);
+		if (notification) {
+			await notification.remove();
+		}
 	}
 
 	async upsertNotification(notification: Note) {
-		return this.notifications.notificationsv2.upsert({
-			title: notification.title,
-			location: notification.location,
-			bookmarked: false,
-			reviewed: false,
-			last_reviewed: notification.last_reviewed,
-			tags: notification.tags
-		});
+		const existingNotification = await this.db.notifications.findOne({
+			selector: {
+				location: notification.location
+			}
+		}).exec();
+
+		if (existingNotification) {
+			await existingNotification.patch(notification);
+		} else {
+			await this.db.notifications.insert(notification);
+		}
 	}
 }
+*/

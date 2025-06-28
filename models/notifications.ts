@@ -1,4 +1,3 @@
-
 export const notificationsSchema = {
 	version: 1,
 	primaryKey: 'location',
@@ -10,8 +9,7 @@ export const notificationsSchema = {
 		},
 		location: {
 			type: 'string',
-			maxLength: 100,
-			unique: true
+			maxLength: 100
 		},
 		reviewed: {
 			type: 'boolean',
@@ -33,6 +31,10 @@ export const notificationsSchema = {
 			}
 		}
 	},
-	required: ['title', 'location', 'reviewed', 'last_reviewed']
+	migrationStrategies: {
+		1: function(oldDoc: any) {
+			return oldDoc;
+		}
+	}
 };
 

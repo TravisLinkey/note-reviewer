@@ -3,6 +3,7 @@ import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
 import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import * as path from 'path';
 
 export interface Note {
 	title: string;
@@ -26,10 +27,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 	private notificationDashboard: NotificationDashboardView;
 
 	async onload() {
-		const pluginId = this.manifest.id; // Get the plugin ID
-		this.pluginDirPath = `.obsidian/plugins/${pluginId}`;
-
-		this.db = new DB();
+		const vaultRoot = (this.app.vault.adapter as any).basePath;
+		const pluginDir = path.join(vaultRoot, '.obsidian', 'plugins', this.manifest.id);
+		this.db = new DB(pluginDir);
 		await this.db.init();
 
 		this.app.workspace.onLayoutReady(async () => {
@@ -125,6 +125,13 @@ export default class NotificationDashboardPlugin extends Plugin {
 			});
 		} else {
 			this.app.workspace.revealLeaf(existingLeaf);
+		}
+	}
+
+	onunload() {
+		// Close database connection when plugin is disabled
+		if (this.db) {
+			this.db.close();
 		}
 	}
 }
