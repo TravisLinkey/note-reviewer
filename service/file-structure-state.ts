@@ -110,12 +110,22 @@ export class FileStructureState {
 	}
 
 	extractTagsFromMarkdown = (content: string): string[] => {
-		const lines = content.split('\n').slice(0, 10);
-		const tagPattern = /Tags:\s*((\[\[.*?\]\]\s*\|?\s*)+)/;
-		const tagExtractPattern = /\[\[(.*?)\]\]/g;
+		const lines = content.split('\n');
 		const tags = [];
 
-		for (const line of lines) {
+		// First, try to extract tags from YAML frontmatter (new format)
+		const yamlTags = this.extractTagsFromYamlFrontmatter(content);
+		if (yamlTags.length > 0) {
+			yamlTags.forEach(tag => this.allTags.add(tag));
+			return yamlTags;
+		}
+
+		// Fallback to old format: extract from first 10 lines
+		const firstTenLines = lines.slice(0, 10);
+		const tagPattern = /Tags:\s*((\[\[.*?\]\]\s*\|?\s*)+)/;
+		const tagExtractPattern = /\[\[(.*?)\]\]/g;
+
+		for (const line of firstTenLines) {
 			const match = line.match(tagPattern);
 			if (match) {
 				let tagMatch;
@@ -127,6 +137,52 @@ export class FileStructureState {
 		}
 
 		tags.forEach(tag => this.allTags.add(tag));
+		return tags;
+	};
+
+	extractTagsFromYamlFrontmatter = (content: string): string[] => {
+		const tags: string[] = [];
+		// Match YAML frontmatter between --- markers (allow newline or end of string after ---)
+		const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*(\n|$)/);
+		if (!frontmatterMatch) {
+			return tags;
+		}
+		const frontmatter = frontmatterMatch[1];
+		const lines = frontmatter.split('\n');
+		let inTagsSection = false;
+		for (const line of lines) {
+			const trimmedLine = line.trim();
+			if (trimmedLine === 'tags:' || trimmedLine.startsWith('tags:')) {
+				inTagsSection = true;
+				const inlineMatch = line.match(/tags:\s*(.+)/);
+				if (inlineMatch) {
+					const tagString = inlineMatch[1].trim();
+					if (tagString.startsWith('[') && tagString.endsWith(']')) {
+						const tagsInBrackets = tagString.slice(1, -1);
+						const tagList = tagsInBrackets.split(',').map(tag => tag.trim().replace(/['"]/g, ''));
+						tags.push(...tagList.filter(tag => tag.length > 0));
+					} else if (tagString && !tagString.startsWith('-')) {
+						const tagList = tagString.split(',').map(tag => tag.trim().replace(/['"]/g, ''));
+						tags.push(...tagList.filter(tag => tag.length > 0));
+					}
+				}
+				// If no inline tags, continue to look for multi-line format
+				continue;
+			}
+			if (inTagsSection) {
+				if (trimmedLine && !trimmedLine.startsWith(' ') && !trimmedLine.startsWith('\t')) {
+					inTagsSection = false;
+					break;
+				}
+				const tagMatch = trimmedLine.match(/^\s*-\s*(.+)$/);
+				if (tagMatch) {
+					const tag = tagMatch[1].trim().replace(/['"]/g, '');
+					if (tag.length > 0) {
+						tags.push(tag);
+					}
+				}
+			}
+		}
 		return tags;
 	};
 
