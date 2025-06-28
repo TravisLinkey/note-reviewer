@@ -73,33 +73,44 @@
  }
 
 .notification-flex-container {
-    cursor: default; /* Ensure the default cursor for the container */
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	padding: 5px 10px;
-}
-
-.column {
-	flex: 1;
-	display: flex;
-	align-items: center;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px 10px;
+    gap: 0;
 }
 
 .notification-left-column {
-	white-space: nowrap;
+    flex: 0 0 5%;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
 }
 
 .notification-middle-column {
-	justify-content: center;
-	text-align: center;
-	white-space: nowrap;
+    flex: 0 0 50%;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
 }
 
 .notification-right-column {
-	justify-content: flex-end;
-    gap: 5px;
+    flex: 0 0 45%;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.notification-header-done {
+    flex: 0 0 auto;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .notification-right-column.hidden {
@@ -144,6 +155,62 @@
 	margin-bottom: 10px;
 }
 
+/* CSS for the autocomplete input */
+.autocomplete-input {
+	width: 200px;
+	padding: 8px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 14px;
+}
+
+.autocomplete-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+/* CSS for the autocomplete dropdown menu */
+.autocomplete-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-top: none;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	z-index: 1000;
+	max-height: 200px;
+	overflow-y: auto;
+	width: 200px;
+	display: none;
+	border-radius: 0 0 4px 4px;
+}
+
+/* CSS for the autocomplete items */
+.autocomplete-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	color: var(--text-normal);
+	border-bottom: 1px solid var(--background-modifier-border);
+	transition: background-color 0.1s ease;
+}
+
+.autocomplete-item:last-child {
+	border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+	background-color: var(--background-modifier-hover);
+}
+
+.autocomplete-item:active {
+	background-color: var(--background-modifier-active);
+}
+
 .dropdown-menu {
     position: absolute;
     top: 100%; /* Position below the button */
@@ -186,5 +253,21 @@
 	margin-left: 10px;
 	display: 'inline-block';
 	vertical-align: 'middle';
+}
+
+.right-button-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.notification-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--background-modifier-border, #444);
+    margin: 0 8px;
+    align-self: center;
 }
 

@@ -29,38 +29,21 @@ export class NotificationComponent extends Component {
 		this.notificationEl = notificationEl;
 
 		const leftColumn = this.notificationEl.createEl('div', { cls: 'column notification-left-column' });
+		this.notificationEl.createEl('div', { cls: 'notification-divider' });
 		const middleColumn = this.notificationEl.createEl('div', { cls: 'column notification-middle-column' });
 		const rightColumn = this.notificationEl.createEl('div', { cls: 'column notification-right-column' });
 
+		// Checkbox in left column
 		this.checkboxEl = leftColumn.createEl('input', { type: 'checkbox', cls: 'notification-checkbox' });
+
+		// Note name in middle column
 		const clippedTitle = this.notification.title.length < 30 ? this.notification.title : this.notification.title.slice(0, 27) + "...";
-		const titleEl = leftColumn.createEl('div', { cls: 'notification-title', text: clippedTitle });
+		const titleEl = middleColumn.createEl('div', { cls: 'notification-title', text: clippedTitle });
 		titleEl.addEventListener('click', this.openNote.bind(this));
 
-		// Last Reviewed Label
-		const lastReviewedEl = middleColumn.createEl('div', { cls: 'notification-last-reviewed' });
+		// Last Reviewed Label in right column
+		const lastReviewedEl = rightColumn.createEl('div', { cls: 'notification-last-reviewed' });
 		lastReviewedEl.textContent = `${new Date(this.notification.last_reviewed).toLocaleDateString()}`;
-
-		// Buttons
-		this.buttonsContainer = rightColumn.createEl('div', { cls: 'column notification-right-column' });
-		const buttons = this.buttonsContainer.createEl("div", { cls: 'notification-button-container' })
-		const viewButton = this.createIconButton(viewIcon, 'View', this.openNote.bind(this));
-		const doneButton = this.createIconButton(createIcon, 'Done', () => this.markDone());
-		const bookmarkButton = this.createIconButton(bookmarkIcon, 'Bookmark', this.bookmarkNote.bind(this));
-		buttons.appendChild(viewButton);
-		buttons.appendChild(doneButton);
-		buttons.appendChild(bookmarkButton);
-		buttons.classList.add('hidden');
-
-		// Add event listeners for highlighting
-		this.notificationEl.addEventListener('mouseenter', () => {
-			buttons.classList.remove('hidden');
-			this.notificationEl.classList.add('highlighted');
-		});
-		this.notificationEl.addEventListener('mouseleave', () => {
-			buttons.classList.add('hidden');
-			this.notificationEl.classList.remove('highlighted');
-		});
 	}
 
 	createIconButton(pathData: string, ariaLabel: string, clickHandler: () => void): HTMLElement {

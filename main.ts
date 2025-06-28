@@ -2,7 +2,7 @@ import { BookmarkedNotificationView, VIEW_TYPE_BOOKMARKED_DASHBOARD } from "comp
 import { DB } from "service/db";
 import { FileStructureState } from "service/file-structure-state";
 import { NotificationDashboardView, VIEW_TYPE_NOTIFICATION_DASHBOARD } from "components/notification-dashboard";
-import { Plugin, TFile, WorkspaceLeaf } from "obsidian"
+import { Plugin, TFile, WorkspaceLeaf, Notice } from "obsidian"
 
 export interface Note {
 	title: string;
@@ -24,42 +24,69 @@ export default class NotificationDashboardPlugin extends Plugin {
 	private fileStructure: FileStructureState;
 	private pluginDirPath: string;
 	private notificationDashboard: NotificationDashboardView;
+	private isProcessing: boolean = false;
+	private isInitialized: boolean = false;
 
 	async onload() {
+		
 		const pluginId = this.manifest.id; // Get the plugin ID
 		this.pluginDirPath = `.obsidian/plugins/${pluginId}`;
 
 		this.db = new DB();
 		await this.db.init();
+		
+		this.fileStructure = new FileStructureState(this.app, this.app.vault.getName(), this.db);
+		await this.fileStructure.init();
 
-		this.app.workspace.onLayoutReady(async () => {
-			// @ts-ignore
-			this.fileStructure = new FileStructureState(this.app, this.app.vault.adapter.basePath, this.db);
+		this.registerView(
+			VIEW_TYPE_NOTIFICATION_DASHBOARD,
+			(leaf) => new NotificationDashboardView(leaf, this.db, this)
+		);
 
-			await this.fileStructure.init();
+		this.registerView(
+			VIEW_TYPE_BOOKMARKED_DASHBOARD,
+			(leaf) => new BookmarkedNotificationView(leaf, this.db)
+		);
 
-			this.registerView(
-				VIEW_TYPE_NOTIFICATION_DASHBOARD,
-				(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
-			)
+		this.addRibbonIcon("bell", "Note Reviewer", () => {
+			this.activateView();
+		});
 
-			this.registerView(
-				VIEW_TYPE_BOOKMARKED_DASHBOARD,
-				(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
-			)
-		})
+		// COMMENTED OUT: File event handlers to prevent crashes
+		/*
+		this.registerEvent(
+			this.app.vault.on('create', (file) => {
+				if (file instanceof TFile && file.extension === 'md') {
+					this.onModify(file);
+				}
+			})
+		);
 
-		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
-		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
-		this.registerEvent(this.app.vault.on('modify', this.onModify.bind(this)))
+		this.registerEvent(
+			this.app.vault.on('modify', (file) => {
+				if (file instanceof TFile && file.extension === 'md') {
+					this.onModify(file);
+				}
+			})
+		);
 
-		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.activateView());
-
-		this.addCommand({
-			id: 'open-notification-dashboard',
-			name: 'Open Notification Dashboard',
-			callback: async () => await this.activateView()
-		})
+		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				if (file instanceof TFile) {
+					this.onDelete(file);
+				}
+			})
+		);
+		*/
+		
+		// Test database access
+		try {
+			await this.db.getAllNotifications();
+		} catch (error) {
+			console.error("DEBUG: Plugin load - Error accessing database:", error);
+		}
+		
+		this.isInitialized = true;
 	}
 
 	async activateView() {
@@ -78,12 +105,12 @@ export default class NotificationDashboardPlugin extends Plugin {
 	}
 
 	async onModify(file: TFile) {
-		const { vault } = this.app;
-
-		const content = await vault.cachedRead(file);
-		const tags = this.fileStructure.extractTagsFromMarkdown(content);
-
 		try {
+			const { vault } = this.app;
+
+			const content = await vault.cachedRead(file);
+			const tags = this.fileStructure.extractTagsFromMarkdown(content);
+
 			const note = {
 				title: file.name,
 				location: file.path,
@@ -93,8 +120,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 			} as Note;
 
 			await this.db.upsertNotification(note);
-			await this.fileStructure.init();
-
+			
 			const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 			if (notificationLeaf) {
 				const view = notificationLeaf.view as NotificationDashboardView;
@@ -126,5 +152,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 		} else {
 			this.app.workspace.revealLeaf(existingLeaf);
 		}
+	}
+
+	async onDelete(file: TFile) {
+		await this.db.removeNotificationByLocation(file.path);
 	}
 }

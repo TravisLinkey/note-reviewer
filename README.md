@@ -10,10 +10,20 @@ When you have finished reviewing your note, select the done checkbox on that not
 
 ### Tags
 
-If you want your note to be grouped and filterable by a particular `Tag` you must include the following snippet somewhere in the top **10 lines** of your note.
+The plugin supports YAML frontmatter format for tagging your notes:
 
-```
-Tags: [[Tag 1]] | [[Tag 2]]
+#### YAML Frontmatter Format
+Use YAML frontmatter at the top of your note:
+
+```yaml
+---
+id: Add Images
+aliases: []
+tags:
+  - TODO
+  - important
+  - project
+---
 ```
 
 This will automatically be detected by the plugin and allow searching your note via the `Filter` dropdown from the Notification Dashboard.
