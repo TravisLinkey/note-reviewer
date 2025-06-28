@@ -38,6 +38,14 @@ export class FileStructureState {
 			if (file instanceof TFile) {
 				const content = await this.app.vault.cachedRead(file);
 				const tags = this.extractTagsFromMarkdown(content);
+				
+				// Debug specific files that might contain ADR or ServiceCore
+				if (tags.includes('ServiceCore')) {
+					console.log("DEBUG: addNewFileToDatabase - Processing file:", file.name, "path:", file.path);
+					console.log("DEBUG: addNewFileToDatabase - Extracted tags:", tags);
+					console.log("DEBUG: addNewFileToDatabase - File content preview:", content.substring(0, 200));
+				}
+				
 				return {
 					title: file.name,
 					location: file.path,
@@ -58,12 +66,16 @@ export class FileStructureState {
 	async createAllNotes(allNotes: TFile[]): Promise<Note[]> {
 		const notes: Note[] = [];
 
+		console.log("DEBUG: createAllNotes - Starting to process", allNotes.length, "files");
+
 		await Promise.all(allNotes.map(async (file: TFile) => {
 			if (file instanceof TFile) {
+				console.log("DEBUG: createAllNotes - Processing file:", file.name);
 
 				const content = await this.app.vault.cachedRead(file);
-
 				const tags = this.extractTagsFromMarkdown(content);
+
+				console.log("DEBUG: createAllNotes - Extracted tags for", file.name + ":", tags);
 
 				const note = {
 					title: file.name,
@@ -72,10 +84,17 @@ export class FileStructureState {
 					last_reviewed: new Date().toISOString(),
 					tags
 				} as Note;
+				
 				notes.push(note);
+				
+				// Log if this note has tags
+				if (tags.length > 0) {
+					console.log("DEBUG: createAllNotes - Note with tags created:", note.title, "tags:", tags);
+				}
 			}
 		}))
 
+		console.log("DEBUG: createAllNotes - Completed processing, created", notes.length, "notes");
 		return notes;
 	}
 
@@ -110,48 +129,36 @@ export class FileStructureState {
 	}
 
 	extractTagsFromMarkdown = (content: string): string[] => {
-		const lines = content.split('\n');
-		const tags = [];
+		const tags: string[] = [];
 
-		// First, try to extract tags from YAML frontmatter (new format)
+		// Extract tags from YAML frontmatter (new format)
 		const yamlTags = this.extractTagsFromYamlFrontmatter(content);
+		
 		if (yamlTags.length > 0) {
 			yamlTags.forEach(tag => this.allTags.add(tag));
 			return yamlTags;
 		}
 
-		// Fallback to old format: extract from first 10 lines
-		const firstTenLines = lines.slice(0, 10);
-		const tagPattern = /Tags:\s*((\[\[.*?\]\]\s*\|?\s*)+)/;
-		const tagExtractPattern = /\[\[(.*?)\]\]/g;
-
-		for (const line of firstTenLines) {
-			const match = line.match(tagPattern);
-			if (match) {
-				let tagMatch;
-				while ((tagMatch = tagExtractPattern.exec(match[1])) !== null) {
-					tags.push(tagMatch[1]);
-				}
-				break;
-			}
-		}
-
-		tags.forEach(tag => this.allTags.add(tag));
+		// No tags found
 		return tags;
 	};
 
 	extractTagsFromYamlFrontmatter = (content: string): string[] => {
 		const tags: string[] = [];
-		// Match YAML frontmatter between --- markers (allow newline or end of string after ---)
-		const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*(\n|$)/);
+
+		// More robust regex that handles different line endings and edge cases
+		const frontmatterMatch = content.match(/^---\s*[\r\n]+([\s\S]*?)[\r\n]+---\s*[\r\n]*/);
 		if (!frontmatterMatch) {
 			return tags;
 		}
+		
 		const frontmatter = frontmatterMatch[1];
 		const lines = frontmatter.split('\n');
 		let inTagsSection = false;
+		
 		for (const line of lines) {
 			const trimmedLine = line.trim();
+			
 			if (trimmedLine === 'tags:' || trimmedLine.startsWith('tags:')) {
 				inTagsSection = true;
 				const inlineMatch = line.match(/tags:\s*(.+)/);
@@ -170,7 +177,7 @@ export class FileStructureState {
 				continue;
 			}
 			if (inTagsSection) {
-				if (trimmedLine && !trimmedLine.startsWith(' ') && !trimmedLine.startsWith('\t')) {
+				if (trimmedLine && !line.startsWith(' ') && !line.startsWith('\t')) {
 					inTagsSection = false;
 					break;
 				}
@@ -183,6 +190,8 @@ export class FileStructureState {
 				}
 			}
 		}
+		
+		console.log("DEBUG: extractTagsFromYamlFrontmatter - Final tags:", tags);
 		return tags;
 	};
 
@@ -254,31 +263,81 @@ export class FileStructureState {
 	}
 
 	async init() {
-		const { vault } = this.app;
+		console.log("DEBUG: init - Starting simplified initialization");
+		
+		// Just do a basic scan and populate database
+		await this.forceRescan();
+		
+		console.log("DEBUG: init - Simplified initialization completed");
+	}
 
-		// if storage exists, check for changes
-		const stat = await vault.adapter.stat(this.pluginDirPath + "/storage");
-
-		if (stat) {
-			const changes = await this.detectStatefileUpdates();
-
-			if (changes.added.length > 0 || changes.removed.length > 0) {
-				await this.updateFilesInDatabase(changes);
-				await this.updateStateFile();
-			}
-
-			const allNotifications = await this.db.getAllNotifications();
-			if (allNotifications.length < 1) {
-				await this.initNotificationsDatabase();
-			}
-
-		} else {
-			// initialize everything 
-			await this.createStateFile();
-			await this.initNotificationsDatabase();
-			await this.updateStateFile();
+	async forceRescan() {
+		console.log("DEBUG: forceRescan - Starting basic re-scan of all files");
+		
+		// Ensure database is initialized
+		if (!this.db.isInitialized()) {
+			console.log("DEBUG: forceRescan - Database not initialized, initializing...");
+			await this.db.init();
 		}
-
+		
+		const allFiles = this.app.vault.getMarkdownFiles();
+		console.log("DEBUG: forceRescan - Found", allFiles.length, "markdown files");
+		
+		// Log some sample files to verify we're getting the right files
+		console.log("DEBUG: forceRescan - Sample files:");
+		allFiles.slice(0, 5).forEach(file => {
+			console.log("  -", file.name, "path:", file.path);
+		});
+		
+		// Check for specific files we know should exist
+		const jeanPaulFile = allFiles.find(file => file.name.includes('Jean-Paul'));
+		const standupFiles = allFiles.filter(file => file.name.includes('Standup'));
+		
+		console.log("DEBUG: forceRescan - Jean-Paul file found:", !!jeanPaulFile);
+		console.log("DEBUG: forceRescan - Standup files found:", standupFiles.length);
+		
+		// Process all files and update database - simplified
+		let successCount = 0;
+		let errorCount = 0;
+		
+		for (const file of allFiles) {
+			try {
+				console.log("DEBUG: forceRescan - Processing file:", file.name);
+				
+				const content = await this.app.vault.cachedRead(file);
+				const tags = this.extractTagsFromMarkdown(content);
+				
+				console.log("DEBUG: forceRescan - Extracted tags for", file.name + ":", tags);
+				
+				const note = {
+					title: file.name,
+					location: file.path,
+					reviewed: false,
+					last_reviewed: new Date().toISOString(),
+					tags
+				} as Note;
+				
+				await this.db.upsertNotification(note);
+				successCount++;
+				
+				// Log if this note has tags
+				if (tags.length > 0) {
+					console.log("DEBUG: forceRescan - Note with tags created:", note.title, "tags:", tags);
+				}
+				
+			} catch (error) {
+				console.log("DEBUG: forceRescan - Error processing file:", file.name, error);
+				errorCount++;
+			}
+		}
+		
+		console.log("DEBUG: forceRescan - Completed basic re-scan");
+		console.log("DEBUG: forceRescan - Successfully processed:", successCount, "notes");
+		console.log("DEBUG: forceRescan - Errors:", errorCount, "notes");
+		
+		// Verify the database has content
+		const allNotifications = await this.db.getAllNotifications();
+		console.log("DEBUG: forceRescan - Database now contains", allNotifications.length, "notifications");
 	}
 
 	async createStateFile(): Promise<void> {

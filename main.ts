@@ -24,54 +24,77 @@ export default class NotificationDashboardPlugin extends Plugin {
 	private fileStructure: FileStructureState;
 	private pluginDirPath: string;
 	private notificationDashboard: NotificationDashboardView;
+	private isProcessing: boolean = false;
+	private isInitialized: boolean = false;
 
 	async onload() {
+		
 		const pluginId = this.manifest.id; // Get the plugin ID
 		this.pluginDirPath = `.obsidian/plugins/${pluginId}`;
 
 		this.db = new DB();
+		await this.db.init();
 		
+		this.fileStructure = new FileStructureState(this.app, this.app.vault.getName(), this.db);
+		await this.fileStructure.init();
+
+		this.registerView(
+			VIEW_TYPE_NOTIFICATION_DASHBOARD,
+			(leaf) => new NotificationDashboardView(leaf, this.db, this)
+		);
+
+		this.registerView(
+			VIEW_TYPE_BOOKMARKED_DASHBOARD,
+			(leaf) => new BookmarkedNotificationView(leaf, this.db)
+		);
+
+		this.addRibbonIcon("bell", "Note Reviewer", () => {
+			this.activateView();
+		});
+
+		// COMMENTED OUT: File event handlers to prevent crashes
+		/*
+		this.registerEvent(
+			this.app.vault.on('create', (file) => {
+				if (file instanceof TFile && file.extension === 'md') {
+					this.onModify(file);
+				}
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on('modify', (file) => {
+				if (file instanceof TFile && file.extension === 'md') {
+					this.onModify(file);
+				}
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				if (file instanceof TFile) {
+					this.onDelete(file);
+				}
+			})
+		);
+		*/
+		
+		console.log("DEBUG: Plugin loaded successfully");
+		
+		// Test database access
 		try {
-			await this.db.init();
-		} catch (error) {
-			console.error("Failed to initialize database:", error);
-			// Show a notification to the user
-			new Notice("Note Reviewer: Failed to initialize database. Some features may not work properly.");
-			return; // Exit early if database initialization fails
-		}
-
-		this.app.workspace.onLayoutReady(async () => {
-			// @ts-ignore
-			this.fileStructure = new FileStructureState(this.app, this.app.vault.adapter.basePath, this.db);
-
-			try {
-				await this.fileStructure.init();
-			} catch (error) {
-				console.error("Failed to initialize file structure:", error);
+			const notifications = await this.db.getAllNotifications();
+			console.log("DEBUG: Plugin load - Database contains", notifications.length, "notifications");
+			
+			if (notifications.length > 0) {
+				console.log("DEBUG: Plugin load - First notification:", notifications[0]);
 			}
-
-			this.registerView(
-				VIEW_TYPE_NOTIFICATION_DASHBOARD,
-				(leaf: WorkspaceLeaf) => new NotificationDashboardView(leaf, this.db, this)
-			)
-
-			this.registerView(
-				VIEW_TYPE_BOOKMARKED_DASHBOARD,
-				(leaf: WorkspaceLeaf) => new BookmarkedNotificationView(leaf, this.db)
-			)
-		})
-
-		this.registerEvent(this.app.vault.on('rename', this.onRename.bind(this)))
-		this.registerEvent(this.app.vault.on('delete', this.onRename.bind(this)))
-		this.registerEvent(this.app.vault.on('modify', this.onModify.bind(this)))
-
-		this.addRibbonIcon("bell", "Open Notification Dashboard", async () => await this.activateView());
-
-		this.addCommand({
-			id: 'open-notification-dashboard',
-			name: 'Open Notification Dashboard',
-			callback: async () => await this.activateView()
-		})
+		} catch (error) {
+			console.error("DEBUG: Plugin load - Error accessing database:", error);
+		}
+		
+		this.isInitialized = true;
+		console.log("DEBUG: Plugin initialization complete");
 	}
 
 	async activateView() {
@@ -89,13 +112,18 @@ export default class NotificationDashboardPlugin extends Plugin {
 		this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD)[0]);
 	}
 
+	/*
 	async onModify(file: TFile) {
-		const { vault } = this.app;
-
-		const content = await vault.cachedRead(file);
-		const tags = this.fileStructure.extractTagsFromMarkdown(content);
-
 		try {
+			const { vault } = this.app;
+
+			console.log("DEBUG: onModify - File modified:", file.name);
+			
+			const content = await vault.cachedRead(file);
+			const tags = this.fileStructure.extractTagsFromMarkdown(content);
+			
+			console.log("DEBUG: onModify - Extracted tags for", file.name + ":", tags);
+
 			const note = {
 				title: file.name,
 				location: file.path,
@@ -105,8 +133,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 			} as Note;
 
 			await this.db.upsertNotification(note);
-			await this.fileStructure.init();
-
+			
 			const notificationLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 			if (notificationLeaf) {
 				const view = notificationLeaf.view as NotificationDashboardView;
@@ -116,7 +143,9 @@ export default class NotificationDashboardPlugin extends Plugin {
 			console.log("Error: ", e)
 		}
 	}
+	*/
 
+	/*
 	async onRename() {
 		const bookmarkLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NOTIFICATION_DASHBOARD).first();
 		await this.fileStructure.init();
@@ -127,6 +156,7 @@ export default class NotificationDashboardPlugin extends Plugin {
 			await view.loadPage();
 		}
 	}
+	*/
 
 	async showBookmarkedNotifications() {
 		const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKED_DASHBOARD)[0];
@@ -139,4 +169,12 @@ export default class NotificationDashboardPlugin extends Plugin {
 			this.app.workspace.revealLeaf(existingLeaf);
 		}
 	}
+
+	/*
+	async onDelete(file: TFile) {
+		// Handle file deletion
+		console.log("DEBUG: onDelete - File deleted:", file.name);
+		await this.db.removeNotificationByLocation(file.path);
+	}
+	*/
 }
